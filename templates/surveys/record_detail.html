@@ -1,0 +1,309 @@
+{% extends "base_ui.html" %}
+{% load ui %}
+{% block title %}Phiếu điều tra #{{ rec.pk }}{% endblock %}
+
+{% block page_header %}
+<div class="pt-space-md pb-space-md flex flex-wrap items-end justify-between gap-space-md">
+  <div class="min-w-0">
+    <nav class="flex flex-wrap items-center gap-1 text-on-surface-variant font-label-md mb-space-xs">
+      <a href="{% url 'surveys:record_list' %}" class="hover:text-primary">Phiếu điều tra</a>
+      <span class="msym text-[14px] text-outline">chevron_right</span>
+      <span class="text-primary font-semibold">Phiếu #{{ rec.pk }}</span>
+    </nav>
+    <div class="flex flex-wrap items-center gap-space-sm">
+      <h1 class="font-display-sm text-display-sm text-on-surface tracking-tight">Phiếu điều tra #{{ rec.pk }}</h1>
+      {{ rec|state_badge }}
+    </div>
+    <p class="font-body-md text-body-md text-on-surface-variant mt-space-2xs">
+      {{ rec.point.code }} — {{ rec.point.name }} · {{ rec.survey_date|vn_date }}
+    </p>
+  </div>
+  <div class="flex flex-wrap items-center gap-space-sm">
+    <a class="h-10 px-space-md rounded-xl bg-surface-container hover:bg-surface-container-high text-on-surface font-label-lg inline-flex items-center gap-1.5" href="{% url 'surveys:record_list' %}">
+      <span class="msym text-[18px]">arrow_back</span>Danh sách
+    </a>
+    {% if can_edit %}
+    <a class="h-10 px-space-md rounded-xl bg-primary hover:bg-primary-container text-white font-label-lg inline-flex items-center gap-1.5" href="{% url 'surveys:record_edit' rec.pk %}">
+      <span class="msym text-[18px]">edit</span>Sửa phiếu
+    </a>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Rule engine -->
+{% if errors or warnings or rec.review_note %}
+<div class="flex flex-col gap-space-sm mb-space-md">
+  {% if errors %}
+  <div class="rounded-xl bg-error-container text-on-error-container p-space-md">
+    <div class="flex items-center gap-2 mb-1"><span class="msym text-[20px]">error</span>
+      <strong class="font-headline-sm text-headline-sm">Lỗi dữ liệu ({{ errors|length }}) — cần sửa trước khi xác nhận</strong></div>
+    <ul class="list-disc pl-8 font-body-sm text-body-sm">{% for e in errors %}<li>{{ e }}</li>{% endfor %}</ul>
+  </div>
+  {% endif %}
+  {% if warnings %}
+  <div class="rounded-xl bg-secondary-fixed text-on-secondary-fixed p-space-md">
+    <div class="flex items-center gap-2 mb-1"><span class="msym text-[20px]">warning</span>
+      <strong class="font-headline-sm text-headline-sm">Cảnh báo kiểm tra ({{ warnings|length }})</strong></div>
+    <ul class="list-disc pl-8 font-body-sm text-body-sm">{% for w in warnings %}<li>{{ w }}</li>{% endfor %}</ul>
+  </div>
+  {% endif %}
+  {% if rec.review_note and rec.status == 'revision' %}
+  <div class="rounded-xl bg-error-container text-on-error-container p-space-md">
+    <div class="flex items-center gap-2 mb-1"><span class="msym text-[20px]">assignment_return</span>
+      <strong class="font-headline-sm text-headline-sm">Yêu cầu chỉnh sửa từ cán bộ xác nhận</strong></div>
+    <p class="font-body-sm text-body-sm pl-8">{{ rec.review_note }}</p>
+  </div>
+  {% endif %}
+</div>
+{% endif %}
+
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-space-lg">
+  <!-- LEFT: data -->
+  <div class="lg:col-span-8 flex flex-col gap-space-lg">
+    <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+      <div class="px-space-lg py-space-sm bg-surface-container-low flex items-center gap-2">
+        <span class="msym text-[18px] text-primary">fact_check</span>
+        <h2 class="font-headline-sm text-headline-sm text-on-surface">Thông tin điều tra</h2>
+      </div>
+      <dl class="divide-y divide-outline-variant/20">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-space-xs px-space-lg py-space-sm">
+          <dt class="font-label-md text-label-md text-on-surface-variant">Thời gian</dt>
+          <dd class="font-body-sm text-body-sm text-on-surface sm:col-span-2">{{ rec.survey_date|vn_date }}</dd>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-space-xs px-space-lg py-space-sm">
+          <dt class="font-label-md text-label-md text-on-surface-variant">Điểm điều tra</dt>
+          <dd class="font-body-sm text-body-sm text-on-surface sm:col-span-2">{{ rec.point }} · {{ rec.point.division.full_name }}</dd>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-space-xs px-space-lg py-space-sm">
+          <dt class="font-label-md text-label-md text-on-surface-variant">Kế hoạch</dt>
+          <dd class="font-body-sm text-body-sm text-on-surface sm:col-span-2">{{ rec.plan|default:"—" }}</dd>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-space-xs px-space-lg py-space-sm">
+          <dt class="font-label-md text-label-md text-on-surface-variant">Đơn vị / cán bộ</dt>
+          <dd class="font-body-sm text-body-sm text-on-surface sm:col-span-2">{{ rec.unit|default:"—" }} · {{ rec.surveyor|default:"—" }}</dd>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-space-xs px-space-lg py-space-sm">
+          <dt class="font-label-md text-label-md text-on-surface-variant">Cây trồng / mùa vụ</dt>
+          <dd class="font-body-sm text-body-sm text-on-surface sm:col-span-2">{{ rec.crop }}{% if rec.season %} · {{ rec.season }}{% endif %}</dd>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-space-xs px-space-lg py-space-sm">
+          <dt class="font-label-md text-label-md text-on-surface-variant">Giai đoạn sinh trưởng</dt>
+          <dd class="font-body-sm text-body-sm text-on-surface sm:col-span-2">{{ rec.stage|default:"—" }}</dd>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-space-xs px-space-lg py-space-sm">
+          <dt class="font-label-md text-label-md text-on-surface-variant">Đối tượng gây hại</dt>
+          <dd class="font-body-sm text-body-sm text-on-surface sm:col-span-2">{{ rec.pest }} <span class="text-on-surface-variant">· {{ rec.method|default:"—" }}</span></dd>
+        </div>
+      </dl>
+
+      <!-- Chỉ số đo -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-space-sm p-space-lg bg-surface-container-low border-y border-outline-variant/30">
+        <div class="bg-white rounded-lg p-space-sm">
+          <div class="font-label-sm text-label-sm text-on-surface-variant uppercase">Mật độ</div>
+          <div class="font-headline-lg text-headline-lg text-on-surface">{{ rec.density|num }}</div>
+        </div>
+        <div class="bg-white rounded-lg p-space-sm">
+          <div class="font-label-sm text-label-sm text-on-surface-variant uppercase">Tỷ lệ hại</div>
+          <div class="font-headline-lg text-headline-lg {% if rec.damage_rate and rec.damage_rate >= 30 %}text-tertiary{% else %}text-on-surface{% endif %}">
+            {% if rec.damage_rate is not None %}{{ rec.damage_rate|num }}%{% else %}—{% endif %}
+          </div>
+        </div>
+        <div class="bg-white rounded-lg p-space-sm">
+          <div class="font-label-sm text-label-sm text-on-surface-variant uppercase">DT điều tra</div>
+          <div class="font-headline-lg text-headline-lg text-on-surface">{{ rec.surveyed_area|num }} <span class="font-label-sm text-outline">ha</span></div>
+        </div>
+        <div class="bg-white rounded-lg p-space-sm">
+          <div class="font-label-sm text-label-sm text-on-surface-variant uppercase">DT bị hại</div>
+          <div class="font-headline-lg text-headline-lg text-on-surface">{{ rec.affected_area|num }} <span class="font-label-sm text-outline">ha</span></div>
+        </div>
+      </div>
+
+      <dl class="divide-y divide-outline-variant/20">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-space-xs px-space-lg py-space-sm">
+          <dt class="font-label-md text-label-md text-on-surface-variant">Mức phổ biến / mức độ hại</dt>
+          <dd class="font-body-sm text-body-sm text-on-surface sm:col-span-2">{{ rec.prevalence|default:"—" }} · {{ rec.damage_level|default:"—" }}</dd>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-space-xs px-space-lg py-space-sm">
+          <dt class="font-label-md text-label-md text-on-surface-variant">Tọa độ GPS</dt>
+          <dd class="font-body-sm text-body-sm text-on-surface sm:col-span-2 font-data-tabular">
+            {% if coords %}
+            {{ coords.0 }}, {{ coords.1 }}
+            <a href="{% url 'mapview:map' %}?lat={{ coords.0 }}&lng={{ coords.1 }}" class="text-primary hover:underline ml-2">Xem trên bản đồ →</a>
+            {% else %}—{% endif %}
+          </dd>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-space-xs px-space-lg py-space-sm">
+          <dt class="font-label-md text-label-md text-on-surface-variant">Nguồn dữ liệu</dt>
+          <dd class="font-body-sm text-body-sm text-on-surface sm:col-span-2">{{ rec.get_source_display }}</dd>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-space-xs px-space-lg py-space-sm">
+          <dt class="font-label-md text-label-md text-on-surface-variant">Nhận xét chuyên môn</dt>
+          <dd class="font-body-sm text-body-sm text-on-surface sm:col-span-2">{{ rec.comment|default:"—"|linebreaksbr }}</dd>
+        </div>
+        {% for k, v in rec.data.items %}
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-space-xs px-space-lg py-space-sm">
+          <dt class="font-label-md text-label-md text-on-surface-variant">{{ k }}</dt>
+          <dd class="font-body-sm text-body-sm text-on-surface sm:col-span-2">{{ v|default_if_none:"—" }}</dd>
+        </div>
+        {% endfor %}
+        {% if rec.confirmed_by %}
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-space-xs px-space-lg py-space-sm">
+          <dt class="font-label-md text-label-md text-on-surface-variant">Xác nhận bởi</dt>
+          <dd class="font-body-sm text-body-sm text-primary sm:col-span-2 flex items-center gap-1">
+            <span class="msym text-[16px]">task_alt</span>{{ rec.confirmed_by }} · {{ rec.confirmed_at|vn_date }}
+          </dd>
+        </div>
+        {% endif %}
+      </dl>
+    </div>
+
+    <!-- Attachments -->
+    <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+      <div class="px-space-lg py-space-sm bg-surface-container-low flex items-center gap-2">
+        <span class="msym text-[18px] text-primary">photo_camera</span>
+        <h2 class="font-headline-sm text-headline-sm text-on-surface">Hình ảnh &amp; tài liệu minh chứng</h2>
+        <span class="px-2 py-0.5 rounded-full bg-surface-container text-on-surface-variant font-label-sm">{{ attachments|length }}</span>
+      </div>
+      <div class="p-space-lg">
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-space-sm">
+          {% for a in attachments %}
+          <div class="border border-outline-variant/40 rounded-xl overflow-hidden flex flex-col">
+            {% if a.is_image %}
+            <a href="{{ a.file.url }}" target="_blank" rel="noopener" class="block bg-surface-container">
+              <img src="{{ a.file.url }}" class="w-full h-24 object-cover" alt="{{ a.caption|default:'Hình ảnh hiện trường' }}" loading="lazy">
+            </a>
+            {% else %}
+            <a href="{{ a.file.url }}" target="_blank" rel="noopener" class="h-24 bg-surface-container flex items-center justify-center">
+              <span class="msym text-[32px] text-outline">description</span>
+            </a>
+            {% endif %}
+            <div class="p-2 flex flex-col gap-1">
+              <span class="font-label-sm text-label-sm text-on-surface line-clamp-2">{{ a.caption|default:"Tệp đính kèm" }}</span>
+              {% if can_edit %}
+              <form method="post" action="{% url 'surveys:attachment_delete' a.pk %}" onsubmit="return confirm('Xóa tệp này?')">
+                {% csrf_token %}
+                <button class="font-label-sm text-label-sm text-tertiary hover:underline" type="submit">Xóa</button>
+              </form>
+              {% endif %}
+            </div>
+          </div>
+          {% empty %}
+          <p class="col-span-full font-body-sm text-body-sm text-on-surface-variant text-center py-space-md">Chưa có tệp đính kèm.</p>
+          {% endfor %}
+        </div>
+
+        {% if can_edit %}
+        <form method="post" enctype="multipart/form-data" action="{% url 'surveys:record_attach' rec.pk %}"
+              class="mt-space-md pt-space-md border-t border-outline-variant/30 grid grid-cols-1 md:grid-cols-12 gap-space-sm items-end">
+          {% csrf_token %}
+          <div class="md:col-span-5 flex flex-col gap-1">
+            <label class="tw-label" for="id_file">Tệp (ảnh, PDF, Office; tối đa 10 MB)</label>
+            <input class="tw-input py-1.5" type="file" id="id_file" name="file" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx" capture="environment" required>
+          </div>
+          <div class="md:col-span-4 flex flex-col gap-1">
+            <label class="tw-label" for="id_caption">Chú thích</label>
+            <input class="tw-input" id="id_caption" name="caption" maxlength="200">
+          </div>
+          <div class="md:col-span-3">
+            <button class="h-10 w-full rounded-xl bg-primary text-white font-label-lg inline-flex items-center justify-center gap-1.5" type="submit">
+              <span class="msym text-[18px]">attach_file</span>Đính kèm
+            </button>
+          </div>
+        </form>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT: workflow -->
+  <div class="lg:col-span-4 flex flex-col gap-space-lg">
+    {% if can_submit or can_review or can_reopen %}
+    <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+      <div class="px-space-lg py-space-sm bg-surface-container-low flex items-center gap-2">
+        <span class="msym text-[18px] text-primary">approval</span>
+        <h2 class="font-headline-sm text-headline-sm text-on-surface">Quy trình xác nhận</h2>
+      </div>
+      <form method="post" class="p-space-lg flex flex-col gap-space-sm">
+        {% csrf_token %}
+        <div class="flex flex-col gap-1">
+          <label class="tw-label" for="note">Ý kiến / yêu cầu chỉnh sửa</label>
+          <textarea class="tw-input" id="note" name="note" rows="3"></textarea>
+        </div>
+        {% if can_submit %}
+        <button class="h-10 rounded-xl bg-primary hover:bg-primary-container text-white font-label-lg inline-flex items-center justify-center gap-2" formaction="{% url 'surveys:record_action' rec.pk 'submit' %}">
+          <span class="msym text-[18px]">send</span>Gửi xác nhận
+        </button>
+        {% endif %}
+        {% if can_review %}
+        <button class="h-10 rounded-xl bg-primary-container hover:bg-primary text-white font-label-lg inline-flex items-center justify-center gap-2" formaction="{% url 'surveys:record_action' rec.pk 'confirm' %}">
+          <span class="msym text-[18px]">task_alt</span>Xác nhận dữ liệu
+        </button>
+        <button class="h-10 rounded-xl bg-error-container hover:bg-tertiary-container hover:text-white text-on-error-container font-label-lg inline-flex items-center justify-center gap-2" formaction="{% url 'surveys:record_action' rec.pk 'revise' %}">
+          <span class="msym text-[18px]">assignment_return</span>Yêu cầu chỉnh sửa
+        </button>
+        {% endif %}
+        {% if can_reopen %}
+        <button class="h-10 rounded-xl bg-surface-container hover:bg-surface-container-high text-on-surface font-label-lg inline-flex items-center justify-center gap-2" formaction="{% url 'surveys:record_action' rec.pk 'reopen' %}">
+          <span class="msym text-[18px]">lock_open</span>Mở lại để chỉnh sửa
+        </button>
+        {% endif %}
+      </form>
+    </div>
+    {% endif %}
+
+    <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+      <div class="px-space-lg py-space-sm bg-surface-container-low flex items-center gap-2">
+        <span class="msym text-[18px] text-primary">history</span>
+        <h2 class="font-headline-sm text-headline-sm text-on-surface">Lịch sử xử lý</h2>
+      </div>
+      <ul class="divide-y divide-outline-variant/20 max-h-72 overflow-y-auto">
+        {% for h in history %}
+        <li class="px-space-lg py-space-sm">
+          <p class="font-body-sm text-body-sm text-on-surface">
+            <strong>{{ h.action }}</strong>{% if h.to_status %} → {{ h.to_status }}{% endif %}
+          </p>
+          <p class="font-label-sm text-label-sm text-outline">{{ h.user|default:"—" }} · {{ h.created_at|vn_date }}</p>
+          {% if h.note %}<p class="font-label-sm text-label-sm text-on-surface-variant mt-0.5">{{ h.note }}</p>{% endif %}
+        </li>
+        {% empty %}
+        <li class="px-space-lg py-space-md text-center font-body-sm text-on-surface-variant">Chưa có.</li>
+        {% endfor %}
+      </ul>
+    </div>
+
+    <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+      <div class="px-space-lg py-space-sm bg-surface-container-low flex items-center gap-2">
+        <span class="msym text-[18px] text-primary">manage_history</span>
+        <h2 class="font-headline-sm text-headline-sm text-on-surface">Lịch sử cập nhật dữ liệu</h2>
+      </div>
+      <ul class="divide-y divide-outline-variant/20 max-h-72 overflow-y-auto">
+        {% for h in changes %}
+        <li class="px-space-lg py-space-sm flex items-start gap-space-sm">
+          <div class="w-6 h-6 rounded-full {{ h.action|audit_icon:'class' }} flex items-center justify-center shrink-0 mt-0.5">
+            <span class="msym text-[14px]">{{ h.action|audit_icon:"icon" }}</span>
+          </div>
+          <div class="min-w-0 flex-1">
+            <p class="font-body-sm text-body-sm text-on-surface"><strong>{{ h.action }}</strong> · {{ h.username|default:"hệ thống" }}</p>
+            <p class="font-label-sm text-label-sm text-outline">{{ h.created_at|vn_date }}</p>
+            {% if h.changes %}
+            <ul class="mt-1 flex flex-col gap-0.5">
+              {% for k, v in h.changes.items %}
+              <li class="font-label-sm text-label-sm text-on-surface-variant">
+                <span class="text-outline">{{ k }}:</span>
+                <span class="line-through mr-1">{{ v.0|default:"∅" }}</span>→ <span class="text-primary font-semibold">{{ v.1|default:"∅" }}</span>
+              </li>
+              {% endfor %}
+            </ul>
+            {% endif %}
+          </div>
+        </li>
+        {% empty %}
+        <li class="px-space-lg py-space-md text-center font-body-sm text-on-surface-variant">Chưa có.</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+</div>
+{% endblock %}

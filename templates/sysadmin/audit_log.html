@@ -1,0 +1,100 @@
+{% extends "base_ui.html" %}
+{% load ui %}
+{% block title %}Nhật ký thao tác{% endblock %}
+
+{% block page_header %}
+<div class="pt-space-md pb-space-md flex flex-wrap items-end justify-between gap-space-md">
+  <div class="min-w-0">
+    <nav class="flex flex-wrap items-center gap-1 text-on-surface-variant font-label-md mb-space-xs">
+      <a href="{% url 'sysadmin:index' %}" class="hover:text-primary">Quản trị hệ thống</a>
+      <span class="msym text-[14px] text-outline">chevron_right</span>
+      <span class="text-primary font-semibold">Nhật ký thao tác</span>
+    </nav>
+    <h1 class="font-display-sm text-display-sm text-on-surface tracking-tight">Nhật ký thao tác &amp; cập nhật dữ liệu</h1>
+    <p class="font-body-md text-body-md text-on-surface-variant mt-space-2xs">
+      Bản ghi bất biến phục vụ truy vết; mọi thay đổi dữ liệu đều được ghi nhận kèm người thực hiện và địa chỉ IP.
+    </p>
+  </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="bg-white rounded-xl shadow-sm overflow-hidden">
+  <form class="p-space-md bg-surface-container-low border-b border-outline-variant/30 grid grid-cols-2 lg:grid-cols-6 gap-space-sm" method="get">
+    <div class="flex flex-col gap-1">
+      <label class="tw-label" for="user">Người thực hiện</label>
+      <input class="tw-input" id="user" name="user" value="{{ g.user }}">
+    </div>
+    <div class="flex flex-col gap-1">
+      <label class="tw-label" for="action">Hành động</label>
+      <input class="tw-input" id="action" name="action" value="{{ g.action }}" placeholder="create, update...">
+    </div>
+    <div class="flex flex-col gap-1">
+      <label class="tw-label" for="model">Đối tượng</label>
+      <input class="tw-input" id="model" name="model" value="{{ g.model }}" placeholder="surveys.SurveyRecord">
+    </div>
+    <div class="flex flex-col gap-1">
+      <label class="tw-label" for="date_from">Từ ngày</label>
+      <input class="tw-input" type="date" id="date_from" name="date_from" value="{{ g.date_from }}">
+    </div>
+    <div class="flex flex-col gap-1">
+      <label class="tw-label" for="date_to">Đến ngày</label>
+      <input class="tw-input" type="date" id="date_to" name="date_to" value="{{ g.date_to }}">
+    </div>
+    <div class="flex items-end">
+      <button class="h-10 flex-1 rounded-xl bg-primary text-white font-label-lg inline-flex items-center justify-center gap-1.5" type="submit">
+        <span class="msym text-[18px]">filter_alt</span>Lọc
+      </button>
+    </div>
+  </form>
+
+  <div class="overflow-x-auto">
+    <table class="w-full text-left border-collapse">
+      <thead>
+        <tr class="bg-surface-container text-on-surface-variant font-label-sm text-label-sm uppercase tracking-wider">
+          <th class="py-space-sm px-space-md">Thời điểm</th>
+          <th class="py-space-sm px-space-md">Người dùng</th>
+          <th class="py-space-sm px-space-md">Hành động</th>
+          <th class="py-space-sm px-space-md">Đối tượng</th>
+          <th class="py-space-sm px-space-md">Thay đổi</th>
+          <th class="py-space-sm px-space-md">IP</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-outline-variant/30 font-body-sm text-body-sm">
+        {% for l in page %}
+        <tr class="hover:bg-surface-container-low transition-colors align-top">
+          <td class="py-space-sm px-space-md whitespace-nowrap font-data-tabular text-data-tabular">{{ l.created_at|vn_date }}</td>
+          <td class="py-space-sm px-space-md">{{ l.username|default:"—" }}</td>
+          <td class="py-space-sm px-space-md">
+            <span class="inline-flex items-center gap-1">
+              <span class="w-6 h-6 rounded-full {{ l.action|audit_icon:'class' }} flex items-center justify-center shrink-0">
+                <span class="msym text-[14px]">{{ l.action|audit_icon:"icon" }}</span>
+              </span>
+              <span class="font-label-md">{{ l.action }}</span>
+            </span>
+          </td>
+          <td class="py-space-sm px-space-md">
+            <span class="block text-on-surface">{{ l.model_label }} <span class="text-primary">#{{ l.object_id }}</span></span>
+            <span class="block font-label-sm text-label-sm text-outline line-clamp-2">{{ l.object_repr }}</span>
+          </td>
+          <td class="py-space-sm px-space-md">
+            {% for k, v in l.changes.items %}
+            <div class="font-label-sm text-label-sm text-on-surface-variant">
+              <span class="text-outline">{{ k }}:</span>
+              <span class="line-through">{{ v.0|default:"∅" }}</span> → <span class="text-primary font-semibold">{{ v.1|default:"∅" }}</span>
+            </div>
+            {% endfor %}
+            {% if l.note %}<div class="font-label-sm text-label-sm text-on-surface-variant italic">{{ l.note }}</div>{% endif %}
+            {% if not l.changes and not l.note %}<span class="text-outline">—</span>{% endif %}
+          </td>
+          <td class="py-space-sm px-space-md font-data-tabular text-data-tabular text-on-surface-variant">{{ l.ip_address|default:"—" }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6" class="py-space-3xl text-center text-on-surface-variant">Không có nhật ký.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% include "partials/pagination.html" %}
+{% endblock %}

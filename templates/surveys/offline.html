@@ -1,0 +1,255 @@
+{% extends "base_ui.html" %}
+{% block title %}Nhập liệu hiện trường{% endblock %}
+
+{% block page_header %}
+<div class="pt-space-md pb-space-md">
+  <nav class="flex flex-wrap items-center gap-1 text-on-surface-variant font-label-md mb-space-xs">
+    <a href="{% url 'surveys:record_list' %}" class="hover:text-primary">Phiếu điều tra</a>
+    <span class="msym text-[14px] text-outline">chevron_right</span>
+    <span class="text-primary font-semibold">Nhập liệu hiện trường</span>
+  </nav>
+  <h1 class="font-display-sm text-display-sm text-on-surface tracking-tight">Nhập liệu hiện trường (hỗ trợ ngoại tuyến)</h1>
+  <p class="font-body-md text-body-md text-on-surface-variant max-w-4xl mt-space-2xs">
+    Phiếu được lưu tạm trên thiết bị khi mất kết nối và tự đồng bộ khi có mạng.
+    Cần mở trang này khi còn mạng ít nhất một lần để tải danh mục.
+    Phiếu sau đồng bộ ở trạng thái Lưu tạm, cần vào danh sách phiếu để gửi xác nhận.
+  </p>
+</div>
+{% endblock %}
+
+{% block content %}
+<div id="net" role="status"
+     class="flex items-center gap-space-sm px-space-md py-space-sm rounded-xl bg-surface-container text-on-surface font-body-sm mb-space-md">
+  <span class="msym text-[18px]">wifi</span>
+  <span id="net-text">Đang kiểm tra kết nối...</span>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-space-lg">
+  <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+    <div class="px-space-lg py-space-sm bg-surface-container-low flex items-center gap-2">
+      <span class="msym text-[18px] text-primary">edit_note</span>
+      <h2 class="font-headline-sm text-headline-sm text-on-surface">Phiếu mới</h2>
+    </div>
+    <form id="f" novalidate class="p-space-lg grid grid-cols-1 md:grid-cols-2 gap-space-md">
+      <div class="md:col-span-2 flex flex-col gap-1">
+        <label class="tw-label" for="task">Nhiệm vụ (nếu có)</label>
+        <select class="tw-input" id="task"><option value="">Không gắn nhiệm vụ</option></select>
+      </div>
+      <div class="md:col-span-2 flex flex-col gap-1">
+        <label class="tw-label" for="point">Điểm điều tra <span class="text-tertiary">*</span></label>
+        <select class="tw-input" id="point" required></select>
+      </div>
+      <div class="flex flex-col gap-1">
+        <label class="tw-label" for="crop">Cây trồng <span class="text-tertiary">*</span></label>
+        <select class="tw-input" id="crop" required></select>
+      </div>
+      <div class="flex flex-col gap-1">
+        <label class="tw-label" for="pest">Sinh vật gây hại <span class="text-tertiary">*</span></label>
+        <select class="tw-input" id="pest" required></select>
+      </div>
+      <div class="flex flex-col gap-1">
+        <label class="tw-label" for="when">Thời gian <span class="text-tertiary">*</span></label>
+        <input type="datetime-local" class="tw-input" id="when" required>
+      </div>
+      <div class="flex flex-col gap-1">
+        <label class="tw-label" for="density">Mật độ</label>
+        <input type="number" step="any" min="0" class="tw-input" id="density">
+      </div>
+      <div class="flex flex-col gap-1">
+        <label class="tw-label" for="rate">Tỷ lệ hại (%)</label>
+        <input type="number" step="any" min="0" max="100" class="tw-input" id="rate">
+      </div>
+      <div class="flex flex-col gap-1">
+        <label class="tw-label" for="area">DT điều tra (ha)</label>
+        <input type="number" step="any" min="0" class="tw-input" id="area">
+      </div>
+      <div class="flex flex-col gap-1">
+        <label class="tw-label" for="aff">DT bị hại (ha)</label>
+        <input type="number" step="any" min="0" class="tw-input" id="aff">
+      </div>
+      <div class="flex flex-col gap-1">
+        <label class="tw-label" for="lat">Vĩ độ</label>
+        <input type="number" step="any" class="tw-input" id="lat">
+      </div>
+      <div class="flex flex-col gap-1">
+        <label class="tw-label" for="lng">Kinh độ</label>
+        <input type="number" step="any" class="tw-input" id="lng">
+      </div>
+      <div class="md:col-span-2 flex flex-col gap-1">
+        <label class="tw-label" for="comment">Nhận xét</label>
+        <textarea class="tw-input" id="comment" rows="2"></textarea>
+      </div>
+      <div class="md:col-span-2 flex flex-wrap items-center gap-space-sm pt-space-xs">
+        <button class="h-10 px-space-md rounded-xl bg-primary hover:bg-primary-container text-white font-label-lg inline-flex items-center gap-1.5" type="submit">
+          <span class="msym text-[18px]">save</span>Lưu phiếu
+        </button>
+        <button class="h-10 px-space-md rounded-xl bg-secondary-fixed text-on-secondary-fixed font-label-lg inline-flex items-center gap-1.5" type="button" id="gps">
+          <span class="msym text-[18px]">my_location</span>Lấy GPS
+        </button>
+      </div>
+      <div id="err" class="md:col-span-2 font-label-sm text-label-sm text-tertiary" role="alert"></div>
+    </form>
+  </div>
+
+  <div class="bg-white rounded-xl shadow-sm overflow-hidden h-fit">
+    <div class="px-space-lg py-space-sm bg-surface-container-low flex items-center justify-between gap-space-sm">
+      <div class="flex items-center gap-2">
+        <span class="msym text-[18px] text-primary">sync</span>
+        <h2 class="font-headline-sm text-headline-sm text-on-surface">Phiếu chờ đồng bộ</h2>
+      </div>
+      <button class="h-8 px-space-sm rounded-lg bg-primary text-white font-label-md inline-flex items-center gap-1" id="sync" type="button">
+        <span class="msym text-[16px]">cloud_upload</span>Đồng bộ ngay
+      </button>
+    </div>
+    <ul class="divide-y divide-outline-variant/30" id="queue"></ul>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{{ payload_json|json_script:"payload" }}
+<script>
+(function () {
+    var P = JSON.parse(JSON.parse(document.getElementById('payload').textContent));
+    var KEY = 'pest_offline_queue_{{ user.pk }}', CACHE = 'pest_offline_cache_{{ user.pk }}';
+    function $(i) { return document.getElementById(i); }
+
+    function opts(sel, items, label) {
+        sel.innerHTML = (label ? '<option value="">' + label + '</option>' : '') + items.map(function (x) {
+            var o = document.createElement('option');
+            o.value = x.id;
+            o.textContent = x.name || x.label;
+            return o.outerHTML;
+        }).join('');
+    }
+
+    if (navigator.onLine && P) { try { localStorage.setItem(CACHE, JSON.stringify(P)); } catch (e) {} }
+    else { try { P = JSON.parse(localStorage.getItem(CACHE)) || P; } catch (e) {} }
+
+    opts($('point'), P.points, 'Chọn điểm');
+    opts($('crop'), P.crops, 'Chọn cây trồng');
+    opts($('pest'), P.pests, 'Chọn sinh vật');
+
+    P.tasks.forEach(function (t) {
+        var o = document.createElement('option');
+        o.value = t.id;
+        o.textContent = t.label;
+        $('task').appendChild(o);
+    });
+
+    $('task').addEventListener('change', function () {
+        var t = P.tasks.filter(function (x) { return String(x.id) === $('task').value; })[0];
+        if (t) { $('point').value = t.point; $('crop').value = t.crop; }
+    });
+
+    function now() {
+        var d = new Date();
+        d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+        return d.toISOString().slice(0, 16);
+    }
+    $('when').value = now();
+
+    function q() { try { return JSON.parse(localStorage.getItem(KEY)) || []; } catch (e) { return []; } }
+    function save(a) { localStorage.setItem(KEY, JSON.stringify(a)); render(); }
+
+    function render() {
+        var a = q();
+        $('queue').innerHTML = '';
+        if (!a.length) {
+            $('queue').innerHTML = '<li class="px-space-lg py-space-xl text-center font-body-sm text-on-surface-variant">Không có phiếu chờ.</li>';
+            return;
+        }
+        a.forEach(function (r) {
+            var li = document.createElement('li');
+            li.className = 'px-space-lg py-space-sm font-body-sm flex items-start gap-space-sm';
+            var icon = r.error ? 'error' : 'schedule';
+            var color = r.error ? 'text-tertiary' : 'text-primary';
+            li.innerHTML = '<span class="msym text-[18px] shrink-0 ' + color + '">' + icon + '</span>'
+                         + '<span class="text-on-surface">' + r.survey_date.replace('T', ' ') + ' · điểm #' + r.point
+                         + (r.error ? ' <span class="text-tertiary font-semibold">· LỖI: ' + r.error + '</span>' : '') + '</span>';
+            $('queue').appendChild(li);
+        });
+    }
+
+    function net() {
+        var el = $('net');
+        var base = 'flex items-center gap-space-sm px-space-md py-space-sm rounded-xl font-body-sm mb-space-md ';
+        if (navigator.onLine) {
+            el.className = base + 'bg-primary-fixed text-on-primary-fixed';
+            $('net-text').textContent = 'Đang trực tuyến — phiếu sẽ đồng bộ ngay khi lưu.';
+        } else {
+            el.className = base + 'bg-secondary-fixed text-on-secondary-fixed';
+            $('net-text').textContent = 'Đang ngoại tuyến — phiếu sẽ được lưu trên thiết bị.';
+        }
+    }
+
+    window.addEventListener('online', function () { net(); sync(); });
+    window.addEventListener('offline', net);
+    net(); render();
+
+    function uuid() {
+        return (window.crypto && crypto.randomUUID) ? crypto.randomUUID()
+            : 'id-' + Date.now() + '-' + Math.random().toString(16).slice(2);
+    }
+    function cookie(n) {
+        var m = document.cookie.match('(^|;)\\s*' + n + '=([^;]+)');
+        return m ? decodeURIComponent(m[2]) : '';
+    }
+
+    $('f').addEventListener('submit', function (e) {
+        e.preventDefault();
+        $('err').textContent = '';
+        if (!$('point').value || !$('crop').value || !$('pest').value || !$('when').value) {
+            $('err').textContent = 'Cần chọn điểm, cây trồng, sinh vật và thời gian.';
+            return;
+        }
+        var rate = $('rate').value;
+        if (rate !== '' && (+rate < 0 || +rate > 100)) {
+            $('err').textContent = 'Tỷ lệ hại phải từ 0 đến 100.';
+            return;
+        }
+        var a = q();
+        a.push({
+            client_uuid: uuid(), task: $('task').value || null, point: $('point').value,
+            crop: $('crop').value, pest: $('pest').value, survey_date: $('when').value,
+            density: $('density').value, damage_rate: rate, surveyed_area: $('area').value,
+            affected_area: $('aff').value, latitude: $('lat').value, longitude: $('lng').value,
+            comment: $('comment').value
+        });
+        save(a);
+        $('f').reset();
+        $('when').value = now();
+        if (navigator.onLine) sync();
+    });
+
+    function sync() {
+        var a = q();
+        if (!a.length || !navigator.onLine) return;
+        fetch('{% url "surveys:sync_api" %}', {
+            method: 'POST', credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': cookie('csrftoken') },
+            body: JSON.stringify({ records: a })
+        })
+        .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+        .then(function (j) {
+            var ok = {};
+            j.results.forEach(function (x) {
+                if (x.ok) ok[x.client_uuid] = 1;
+                else a.forEach(function (r) { if (r.client_uuid === x.client_uuid) r.error = x.error; });
+            });
+            save(a.filter(function (r) { return !ok[r.client_uuid]; }));
+        })
+        .catch(function () {});
+    }
+    $('sync').addEventListener('click', sync);
+
+    $('gps').addEventListener('click', function () {
+        if (!navigator.geolocation) { $('err').textContent = 'Thiết bị không hỗ trợ định vị.'; return; }
+        navigator.geolocation.getCurrentPosition(function (p) {
+            $('lat').value = p.coords.latitude.toFixed(6);
+            $('lng').value = p.coords.longitude.toFixed(6);
+        }, function () { $('err').textContent = 'Không lấy được vị trí.'; }, { enableHighAccuracy: true, timeout: 15000 });
+    });
+})();
+</script>
+{% endblock %}

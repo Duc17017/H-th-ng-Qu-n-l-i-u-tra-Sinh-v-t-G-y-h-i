@@ -1,0 +1,218 @@
+{% extends "base_ui.html" %}
+{% load ui %}
+{% block title %}Thiết kế biểu mẫu {{ template.code }}{% endblock %}
+
+{% block page_header %}
+<div class="pt-space-md pb-space-md">
+  <nav class="flex flex-wrap items-center gap-1 text-on-surface-variant font-label-md mb-space-xs">
+    <a href="{% url 'surveys:templates_list' %}" class="hover:text-primary">Biểu mẫu điều tra</a>
+    <span class="msym text-[14px] text-outline">chevron_right</span>
+    <a href="{% url 'surveys:template_catalog' %}?template_id={{ template.pk }}" class="hover:text-primary">Danh mục QCVN</a>
+    <span class="msym text-[14px] text-outline">chevron_right</span>
+    <span class="text-primary font-semibold">{{ template.code }}</span>
+  </nav>
+  <div class="flex flex-col lg:flex-row lg:items-end justify-between gap-space-md">
+    <div>
+      <h1 class="font-display-sm text-display-sm text-on-surface tracking-tight">{{ template.name }}</h1>
+      <p class="font-body-md text-body-md text-on-surface-variant mt-space-2xs">
+        Phiên bản <span class="font-data-tabular text-primary font-semibold">v{{ template.version }}</span>
+        · {{ fields|length }} trường dữ liệu
+        · {% if template.is_active %}Đang áp dụng{% else %}Ngừng áp dụng{% endif %}
+      </p>
+    </div>
+    <a href="{% url 'surveys:template_catalog' %}?template_id={{ template.pk }}"
+       class="h-10 px-space-lg rounded-xl bg-surface-container hover:bg-surface-container-high text-on-surface font-label-lg inline-flex items-center gap-2 shrink-0">
+      <span class="msym text-[20px]">arrow_back</span>Về danh mục
+    </a>
+  </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="grid grid-cols-1 xl:grid-cols-12 gap-space-lg items-start">
+
+  {# ---------------- Thông tin biểu mẫu ---------------- #}
+  <section class="xl:col-span-5 bg-white rounded-xl shadow-sm overflow-hidden">
+    <div class="px-space-lg py-space-sm bg-surface-container-low flex items-center gap-2">
+      <span class="msym text-[18px] text-primary">description</span>
+      <h2 class="font-headline-sm text-headline-sm text-on-surface">Thông tin biểu mẫu</h2>
+    </div>
+    <form method="post" novalidate class="p-space-lg flex flex-col gap-space-md">
+      {% csrf_token %}
+      {% include "partials/form_fields.html" %}
+      <div class="flex flex-wrap items-center gap-space-sm pt-space-md border-t border-outline-variant/30">
+        <button type="submit"
+                class="h-10 px-space-lg rounded-xl bg-primary hover:bg-primary-container text-white font-label-lg inline-flex items-center gap-2">
+          <span class="msym text-[20px]">save</span>Lưu thay đổi
+        </button>
+        <a href="{% url 'surveys:template_catalog' %}?template_id={{ template.pk }}"
+           class="h-10 px-space-lg rounded-xl bg-surface-container hover:bg-surface-container-high text-on-surface font-label-lg inline-flex items-center">Hủy</a>
+      </div>
+    </form>
+  </section>
+
+  {# ---------------- Cấu trúc trường dữ liệu ---------------- #}
+  <section class="xl:col-span-7 flex flex-col gap-space-md">
+    <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+      <div class="px-space-lg py-space-sm bg-surface-container-low flex flex-wrap items-center justify-between gap-space-sm">
+        <div class="flex items-center gap-2">
+          <span class="msym text-[18px] text-primary">dataset</span>
+          <h2 class="font-headline-sm text-headline-sm text-on-surface">Cấu trúc trường dữ liệu</h2>
+        </div>
+        {% if 'create' in perms_map.plans %}
+        <button type="button" id="btn-add-field"
+                class="h-8 px-space-sm rounded-lg bg-primary text-white font-label-md inline-flex items-center gap-1">
+          <span class="msym text-[16px]">add</span>Thêm trường
+        </button>
+        {% endif %}
+      </div>
+
+      {% if fields %}
+      <div class="overflow-x-auto">
+        <table class="w-full text-left font-body-sm">
+          <thead class="bg-surface-container-low/60 text-on-surface-variant font-label-sm uppercase tracking-wide">
+            <tr>
+              <th class="py-2.5 px-4 w-12">#</th>
+              <th class="py-2.5 px-4">Nhãn trường</th>
+              <th class="py-2.5 px-4">Khóa</th>
+              <th class="py-2.5 px-4">Kiểu</th>
+              <th class="py-2.5 px-4">Bắt buộc</th>
+              <th class="py-2.5 px-4">Phạm vi</th>
+              <th class="py-2.5 px-4 text-right">Thao tác</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-outline-variant/25">
+            {% for field in fields %}
+            <tr class="hover:bg-surface-container-low/50 transition-colors">
+              <td class="py-3 px-4 font-data-tabular text-on-surface-variant">{{ field.order }}</td>
+              <td class="py-3 px-4 font-semibold text-on-surface">{{ field.label }}</td>
+              <td class="py-3 px-4 font-data-tabular text-on-surface-variant">{{ field.key }}</td>
+              <td class="py-3 px-4">
+                <span class="px-2 py-0.5 rounded-full bg-surface-container text-on-surface-variant font-label-sm">{{ field.get_field_type_display }}</span>
+              </td>
+              <td class="py-3 px-4">
+                {% if field.required %}
+                <span class="px-2 py-0.5 rounded-full bg-error-container text-on-error-container font-label-sm">Bắt buộc</span>
+                {% else %}
+                <span class="px-2 py-0.5 rounded-full bg-surface-container text-on-surface-variant font-label-sm">Tùy chọn</span>
+                {% endif %}
+              </td>
+              <td class="py-3 px-4 font-data-tabular text-on-surface-variant">
+                {% if field.min_value is not None or field.max_value is not None %}
+                  {{ field.min_value|default_if_none:"−∞" }} … {{ field.max_value|default_if_none:"∞" }}
+                {% elif field.choices %}
+                  {{ field.choice_list|length }} lựa chọn
+                {% else %}—{% endif %}
+              </td>
+              <td class="py-3 px-4 text-right whitespace-nowrap">
+                {% if 'edit' in perms_map.plans %}
+                <a href="{% url 'surveys:fields_edit' field.pk %}" title="Sửa trường"
+                   class="inline-flex w-8 h-8 rounded-lg items-center justify-center text-on-surface-variant hover:bg-surface-container hover:text-primary">
+                  <span class="msym text-[18px]">edit</span>
+                </a>
+                <a href="{% url 'surveys:fields_delete' field.pk %}" title="Xóa trường"
+                   class="inline-flex w-8 h-8 rounded-lg items-center justify-center text-on-surface-variant hover:bg-error-container hover:text-tertiary">
+                  <span class="msym text-[18px]">delete</span>
+                </a>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="py-space-2xl flex flex-col items-center gap-space-sm text-center">
+        <span class="msym text-[40px] text-outline">data_array</span>
+        <p class="font-body-md text-body-md text-on-surface-variant">Biểu mẫu chưa có trường dữ liệu nào.</p>
+        {% if 'create' in perms_map.plans %}
+        <button type="button" data-add-field
+                class="h-9 px-space-md rounded-xl bg-primary text-white font-label-md inline-flex items-center gap-1">
+          <span class="msym text-[18px]">add</span>Thêm trường đầu tiên
+        </button>
+        {% endif %}
+      </div>
+      {% endif %}
+    </div>
+
+    {# -------- Form thêm nhanh trường dữ liệu -------- #}
+    <div id="add-field-panel"
+         class="{% if fields %}hidden{% endif %} bg-white rounded-xl shadow-sm overflow-hidden">
+      <div class="px-space-lg py-space-sm bg-secondary-fixed/50 flex items-center gap-2">
+        <span class="msym text-[18px] text-secondary">playlist_add</span>
+        <h2 class="font-headline-sm text-headline-sm text-on-surface">Thêm trường dữ liệu</h2>
+      </div>
+      <form method="post" action="{% url 'surveys:fields_create' %}" novalidate
+            class="p-space-lg grid grid-cols-1 md:grid-cols-2 gap-space-md">
+        {% csrf_token %}
+        <input type="hidden" name="template" value="{{ template.pk }}">
+        <div class="md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-space-md">
+          <div class="flex flex-col gap-1">
+            <label class="tw-label" for="nf-key">Khóa trường <span class="text-tertiary">*</span></label>
+            <input class="tw-input" id="nf-key" name="key" required maxlength="50" placeholder="vd: mat_do_ray">
+          </div>
+          <div class="md:col-span-2 flex flex-col gap-1">
+            <label class="tw-label" for="nf-label">Nhãn hiển thị <span class="text-tertiary">*</span></label>
+            <input class="tw-input" id="nf-label" name="label" required maxlength="200" placeholder="vd: Mật độ rầy (con/m²)">
+          </div>
+          <div class="flex flex-col gap-1">
+            <label class="tw-label" for="nf-type">Kiểu dữ liệu</label>
+            <select class="tw-input" id="nf-type" name="field_type">
+              <option value="number">Số</option>
+              <option value="text">Văn bản</option>
+              <option value="choice">Lựa chọn</option>
+              <option value="boolean">Có/Không</option>
+            </select>
+          </div>
+          <div class="flex flex-col gap-1">
+            <label class="tw-label" for="nf-order">Thứ tự</label>
+            <input class="tw-input" id="nf-order" name="order" type="number" min="0" value="{{ fields|length }}">
+          </div>
+          <div class="flex flex-col gap-1">
+            <label class="tw-label" for="nf-required">Ràng buộc</label>
+            <label class="h-10 flex items-center gap-2 px-3 rounded-xl bg-surface-container-low font-body-sm text-on-surface">
+              <input type="checkbox" id="nf-required" name="required" value="1" class="rounded accent-primary">Bắt buộc nhập
+            </label>
+          </div>
+          <div class="flex flex-col gap-1">
+            <label class="tw-label" for="nf-min">Nhỏ nhất</label>
+            <input class="tw-input" id="nf-min" name="min_value" type="number" step="any" placeholder="—">
+          </div>
+          <div class="flex flex-col gap-1">
+            <label class="tw-label" for="nf-max">Lớn nhất</label>
+            <input class="tw-input" id="nf-max" name="max_value" type="number" step="any" placeholder="—">
+          </div>
+        </div>
+        <div class="md:col-span-2 flex flex-col gap-1">
+          <label class="tw-label" for="nf-choices">Các lựa chọn (mỗi dòng một giá trị)</label>
+          <textarea class="tw-input" id="nf-choices" name="choices" rows="3" placeholder="Chỉ dùng cho kiểu Lựa chọn"></textarea>
+        </div>
+        <div class="md:col-span-2 flex flex-wrap items-center gap-space-sm pt-space-xs border-t border-outline-variant/30">
+          <button type="submit"
+                  class="h-10 px-space-lg rounded-xl bg-primary hover:bg-primary-container text-white font-label-lg inline-flex items-center gap-2">
+            <span class="msym text-[20px]">add_circle</span>Thêm trường
+          </button>
+          <button type="button" id="btn-cancel-field"
+                  class="h-10 px-space-lg rounded-xl bg-surface-container hover:bg-surface-container-high text-on-surface font-label-lg inline-flex items-center">Hủy</button>
+        </div>
+      </form>
+    </div>
+  </section>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+    var panel = document.getElementById('add-field-panel');
+    if (!panel) return;
+    function show() { panel.classList.remove('hidden'); panel.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+    function hide() { panel.classList.add('hidden'); }
+    document.querySelectorAll('#btn-add-field, [data-add-field]').forEach(function (b) {
+        b.addEventListener('click', show);
+    });
+    var cancel = document.getElementById('btn-cancel-field');
+    if (cancel) cancel.addEventListener('click', hide);
+})();
+</script>
+{% endblock %}

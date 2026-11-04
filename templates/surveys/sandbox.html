@@ -1,0 +1,319 @@
+{% extends "base_ui.html" %}
+{% load ui %}
+{% block title %}Sandbox Thử nghiệm Rule Engine{% endblock %}
+{% block content %}
+<div class="flex flex-col w-full">
+  <!-- Sub-header -->
+  <div class="px-gutter-desktop py-space-md bg-surface-container-lowest shadow-sm flex flex-col gap-space-sm">
+    <div class="flex items-center gap-space-xs text-on-surface-variant font-label-sm">
+      <span>Hệ thống</span>
+      <span class="material-symbols-outlined text-[14px]">chevron_right</span>
+      <span>Danh mục &amp; Chuẩn hóa</span>
+      <span class="material-symbols-outlined text-[14px]">chevron_right</span>
+      <span class="text-primary font-semibold">Mô phỏng Sandbox Kiểm định</span>
+    </div>
+    <h1 class="font-headline-lg text-headline-lg text-on-surface">Thử nghiệm Mô phỏng Rule Engine</h1>
+    <p class="font-body-sm text-body-sm text-on-surface-variant">Sandbox cho phép nạp các kịch bản ngoại lệ để thẩm định độ nhạy của bộ luật xác thực dữ liệu.</p>
+  </div>
+
+  <!-- Main Content -->
+  <div class="p-gutter-desktop flex flex-col gap-space-lg">
+    <!-- Alert Banner -->
+    <div class="bg-surface-container-lowest p-space-md rounded-xl shadow-sm flex items-center gap-space-md">
+      <div class="w-10 h-10 rounded-xl bg-tertiary/10 text-tertiary flex items-center justify-center shrink-0">
+        <span class="material-symbols-outlined text-display-sm">science</span>
+      </div>
+      <div>
+        <div class="font-title-md text-title-md text-on-surface">Không gian Thử nghiệm Mô phỏng Giám sát Dữ liệu</div>
+        <div class="font-body-sm text-body-sm text-on-surface-variant">Thử nghiệm các kịch bản vi phạm để kiểm tra độ nhạy và độ chính xác của bộ luật tự động.</div>
+      </div>
+    </div>
+
+    <!-- 2-Column Layout -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-space-lg">
+      <!-- Left: Input Controls (5 cols) -->
+      <div class="lg:col-span-5 flex flex-col gap-space-lg">
+        <!-- Presets -->
+        <div class="bg-surface-container-lowest p-space-lg rounded-xl shadow-sm flex flex-col gap-space-md">
+          <div class="flex items-center justify-between">
+            <span class="font-headline-sm text-headline-sm text-on-surface flex items-center gap-space-xs">
+              <span class="material-symbols-outlined text-primary">dataset</span>
+              Bộ dữ liệu mẫu
+            </span>
+            <span class="font-label-sm text-label-sm bg-surface-container-high px-space-xs py-space-2xs rounded text-on-surface-variant">{{ presets|length }} Kịch bản</span>
+          </div>
+          <div class="grid grid-cols-1 gap-space-xs" id="preset-selector">
+            {% for preset in presets %}
+            <button class="preset-btn text-left p-space-md rounded-xl transition-all {% if preset.id == 1 %}bg-primary/10 ring-2 ring-primary shadow-sm{% else %}bg-surface-container-low/60 hover:bg-surface-container{% endif %}" data-preset="{{ preset.id }}" data-gps="{{ preset.gps_accuracy }}" data-density="{{ preset.density }}" data-stage="{{ preset.stage }}">
+              <div class="flex items-center justify-between">
+                {% if preset.id == 1 %}<span class="material-symbols-outlined text-primary text-title-md">check_circle</span>{% endif %}
+                <span class="font-title-md text-title-md {% if preset.id == 1 %}text-primary font-bold{% else %}text-on-surface font-medium{% endif %}">{{ preset.name }}</span>
+                {% if preset.id == 1 %}<span class="font-label-sm text-label-sm text-primary font-bold bg-primary/20 px-space-xs rounded-full">ĐANG MÔ PHỎNG</span>{% endif %}
+              </div>
+              <p class="font-body-sm text-body-sm text-on-surface-variant mt-space-2xs">{{ preset.desc }}</p>
+            </button>
+            {% endfor %}
+          </div>
+        </div>
+
+        <!-- Interactive Controls -->
+        <div class="bg-surface-container-lowest p-space-lg rounded-xl shadow-sm flex flex-col gap-space-md">
+          <div class="flex items-center justify-between">
+            <span class="font-headline-sm text-headline-sm text-on-surface flex items-center gap-space-xs">
+              <span class="material-symbols-outlined text-primary">tune</span>
+              Bộ điều khiển Thời gian thực
+            </span>
+          </div>
+
+          <!-- GPS Accuracy Slider -->
+          <div class="flex flex-col gap-space-2xs">
+            <div class="flex items-center justify-between font-label-md">
+              <span class="text-on-surface">Sai số GPS (Accuracy):</span>
+              <span class="font-data-tabular text-primary font-bold" id="slider-gps-val">2.5 m</span>
+            </div>
+            <input class="w-full accent-primary h-2 bg-surface-container rounded-lg cursor-pointer" id="slider-gps" max="40" min="1" step="0.5" type="range" value="2.5"/>
+            <div class="flex justify-between font-label-sm text-on-surface-variant text-[11px]">
+              <span class="text-primary font-semibold">1m (Cực chuẩn)</span>
+              <span class="text-primary font-semibold">Ngưỡng: 10m</span>
+              <span>40m (Mất sóng)</span>
+            </div>
+          </div>
+
+          <!-- Density Slider -->
+          <div class="flex flex-col gap-space-2xs pt-space-xs">
+            <div class="flex items-center justify-between font-label-md">
+              <span class="text-on-surface">Mật độ rầy nâu:</span>
+              <span class="font-data-tabular text-primary font-bold" id="slider-density-val">650 con/m²</span>
+            </div>
+            <input class="w-full accent-primary h-2 bg-surface-container rounded-lg cursor-pointer" id="slider-density" max="15000" min="500" step="50" type="range" value="650"/>
+            <div class="flex justify-between font-label-sm text-on-surface-variant text-[11px]">
+              <span class="text-primary font-semibold">650 (An toàn)</span>
+              <span class="text-secondary font-semibold">Báo động: 5.000</span>
+              <span class="text-tertiary font-semibold">Trần: 10.000</span>
+            </div>
+          </div>
+
+          <!-- Growth Stage Selector -->
+          <div class="flex flex-col gap-space-2xs pt-space-xs">
+            <label class="font-label-md text-on-surface" for="select-growth-stage">Giai đoạn sinh trưởng:</label>
+            <div class="relative">
+              <select class="w-full bg-surface-container-low text-on-surface font-body-md px-space-md py-space-sm rounded-xl appearance-none focus:outline-none focus:ring-2 focus:ring-primary shadow-sm pr-8" id="select-growth-stage">
+                <option selected value="de_nhanh">Đẻ nhánh rộ (25 NSS) - Hợp lệ Đạo ôn lá</option>
+                <option value="lam_dong">Làm đòng - Đòng non</option>
+                <option value="tro_chin">Trỗ thoát - Chín sáp</option>
+              </select>
+              <span class="material-symbols-outlined absolute right-2.5 top-2.5 text-on-surface-variant pointer-events-none text-title-md">expand_more</span>
+            </div>
+          </div>
+
+          <!-- Run Buttons -->
+          <div class="flex gap-space-xs pt-space-xs">
+            <button class="flex-1 flex items-center justify-center gap-space-xs bg-surface-container-low hover:bg-surface-container text-on-surface px-space-md py-space-sm rounded-xl font-label-md transition-colors shadow-sm" id="btn-auto-fix">
+              <span class="material-symbols-outlined text-title-md">auto_fix_high</span>
+              <span>Chuẩn hóa tự động</span>
+            </button>
+            <button class="flex-1 flex items-center justify-center gap-space-xs bg-primary hover:opacity-95 text-on-primary px-space-md py-space-sm rounded-xl font-label-md transition-opacity shadow-sm" id="btn-run-sim">
+              <span class="material-symbols-outlined text-title-md">play_arrow</span>
+              <span>Thẩm định</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right: Results & Rules (7 cols) -->
+      <div class="lg:col-span-7 flex flex-col gap-space-lg">
+        <!-- Scorecard -->
+        <div class="bg-surface-container-lowest p-space-lg rounded-xl shadow-sm flex flex-col gap-space-md border border-primary/20">
+          <div class="flex items-center justify-between">
+            <div>
+              <span class="font-label-sm text-label-sm uppercase tracking-wider text-on-surface-variant font-semibold">Kết luận Kiểm định</span>
+              <div class="flex items-center gap-space-sm mt-space-2xs">
+                <div class="w-7 h-7 rounded-full bg-primary/20 text-primary flex items-center justify-center">
+                  <span class="material-symbols-outlined text-title-md">check_circle</span>
+                </div>
+                <span class="font-headline-lg text-headline-lg text-primary font-bold uppercase tracking-tight" id="overall-status">HỢP LỆ TOÀN DIỆN</span>
+              </div>
+            </div>
+            <div class="flex items-center gap-space-md bg-primary/10 px-space-md py-space-sm rounded-xl border border-primary/20">
+              <div class="relative flex items-center justify-center w-16 h-16">
+                <svg class="w-16 h-16 transform -rotate-90" viewbox="0 0 36 36">
+                  <circle class="text-surface-container-high" cx="18" cy="18" fill="none" r="15.9" stroke="currentColor" stroke-width="2"></circle>
+                  <circle id="score-circle" class="text-primary transition-all" cx="18" cy="18" fill="none" r="15.9" stroke="currentColor" stroke-dasharray="98, 100" stroke-linecap="round" stroke-width="2"></circle>
+                </svg>
+                <div class="absolute flex flex-col items-center">
+                  <span class="font-headline-sm text-headline-sm font-bold text-primary" id="score-val">98</span>
+                  <span class="font-label-sm text-[10px] text-on-surface-variant">/100</span>
+                </div>
+              </div>
+              <div>
+                <span class="font-label-sm text-label-sm text-on-surface-variant">ĐIỂM TIN CẬY</span>
+                <div class="font-title-md text-title-md text-primary font-bold" id="score-verdict">Mức tin cậy tối đa</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Stats -->
+          <div class="grid grid-cols-3 gap-space-md pt-space-xs">
+            <div class="bg-surface-container-low p-space-sm rounded-lg flex flex-col items-center">
+              <span class="font-label-sm text-label-sm text-on-surface-variant">Lỗi nghiêm trọng</span>
+              <span class="font-display-sm text-display-sm text-primary font-bold" id="stat-fails">00</span>
+            </div>
+            <div class="bg-surface-container-low p-space-sm rounded-lg flex flex-col items-center">
+              <span class="font-label-sm text-label-sm text-on-surface-variant">Cảnh báo</span>
+              <span class="font-display-sm text-display-sm text-primary font-bold" id="stat-warns">00</span>
+            </div>
+            <div class="bg-surface-container-low p-space-sm rounded-lg flex flex-col items-center">
+              <span class="font-label-sm text-label-sm text-on-surface-variant">Quy chuẩn đạt</span>
+              <span class="font-display-sm text-display-sm text-primary font-bold" id="stat-passes">06</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Rules Matrix -->
+        <div class="bg-surface-container-lowest p-space-lg rounded-xl shadow-sm flex flex-col gap-space-md">
+          <span class="font-headline-sm text-headline-sm text-on-surface flex items-center gap-space-xs">
+            <span class="material-symbols-outlined text-primary">account_tree</span>
+            Bảng Phán quyết 6 Quy tắc
+          </span>
+          <div class="flex flex-col gap-space-sm" id="rules-container">
+            <!-- Will be populated by JavaScript -->
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const sliderGps = document.getElementById('slider-gps');
+  const sliderGpsVal = document.getElementById('slider-gps-val');
+  const sliderDensity = document.getElementById('slider-density');
+  const sliderDensityVal = document.getElementById('slider-density-val');
+  const selectStage = document.getElementById('select-growth-stage');
+  const btnRun = document.getElementById('btn-run-sim');
+  const btnAutoFix = document.getElementById('btn-auto-fix');
+  const rulesContainer = document.getElementById('rules-container');
+  const overallStatus = document.getElementById('overall-status');
+  const scoreVal = document.getElementById('score-val');
+  const scoreCircle = document.getElementById('score-circle');
+  const scoreVerdict = document.getElementById('score-verdict');
+  const statFails = document.getElementById('stat-fails');
+  const statWarns = document.getElementById('stat-warns');
+  const statPasses = document.getElementById('stat-passes');
+
+  const ruleDefinitions = [
+    { id: "GPS-01", name: "Bán kính sai số GPS", color: "tertiary" },
+    { id: "GPS-02", name: "Kiểm tra Geofencing", color: "tertiary" },
+    { id: "GPS-03", name: "Chống giả mạo (Anti-Mock)", color: "secondary" },
+    { id: "DENS-01", name: "Giới hạn Toán học Mật độ", color: "tertiary" },
+    { id: "DENS-02", name: "Minh chứng bắt buộc", color: "tertiary" },
+    { id: "DENS-03", name: "Xung đột Sinh học", color: "tertiary" },
+  ];
+
+  function updateUI(result) {
+    scoreVal.textContent = result.score;
+    statFails.textContent = String(result.fails).padStart(2, '0');
+    statWarns.textContent = String(result.warns).padStart(2, '0');
+    statPasses.textContent = String(result.passes).padStart(2, '0');
+    overallStatus.textContent = result.overall_status;
+    scoreVerdict.textContent = result.score < 50 ? "Mức báo động đỏ" : (result.score < 70 ? "Mức khuyến nghị xem xét" : "Dữ liệu an toàn");
+    
+    const circleClass = result.verdict_color === "tertiary" ? "text-tertiary" : (result.verdict_color === "secondary" ? "text-secondary" : "text-primary");
+    scoreCircle.className = `${circleClass} transition-all`;
+    scoreCircle.setAttribute('stroke-dasharray', `${result.score}, 100`);
+    
+    // Render rules
+    rulesContainer.innerHTML = '';
+    for (const [ruleId, ruleStatus] of Object.entries(result.rules)) {
+      const ruleDef = ruleDefinitions.find(r => r.id === ruleId);
+      const bgColor = ruleStatus.status === "PASS" ? "bg-surface-container-low" : (ruleStatus.status === "WARN" ? "bg-secondary-fixed/20" : "bg-error-container/20");
+      const badgeBg = ruleStatus.status === "PASS" ? "bg-primary/20" : (ruleStatus.status === "WARN" ? "bg-secondary-fixed" : "bg-tertiary");
+      const badgeText = ruleStatus.status === "PASS" ? "text-primary" : (ruleStatus.status === "WARN" ? "text-on-secondary-container" : "text-on-tertiary");
+      const icon = ruleStatus.status === "PASS" ? "check_circle" : (ruleStatus.status === "WARN" ? "warning" : "error");
+      
+      const ruleCard = document.createElement('div');
+      ruleCard.className = `p-space-md rounded-xl ${bgColor} flex items-start justify-between transition-all`;
+      ruleCard.innerHTML = `
+        <div>
+          <span class="font-title-md text-title-md text-on-surface font-semibold">${ruleDef.name}</span>
+          <span class="font-data-tabular text-label-sm text-on-surface-variant block mt-space-2xs">${ruleId}</span>
+        </div>
+        <span class="font-label-sm text-label-sm font-bold px-space-sm py-space-2xs rounded-full ${badgeBg} ${badgeText} flex items-center gap-space-2xs whitespace-nowrap">
+          <span class="material-symbols-outlined text-[14px]">${icon}</span>
+          ${ruleStatus.status}
+        </span>
+      `;
+      rulesContainer.appendChild(ruleCard);
+    }
+  }
+
+  function runSimulation() {
+    const gpsAcc = parseFloat(sliderGps.value);
+    const density = parseInt(sliderDensity.value);
+    const stage = selectStage.value;
+
+    const formData = new FormData();
+    formData.append('gps_accuracy', gpsAcc);
+    formData.append('density', density);
+    formData.append('stage', stage);
+
+    fetch('{% url "surveys:api_sandbox_simulate" %}', {
+      method: 'POST',
+      headers: { 'X-CSRFToken': '{{ csrf_token }}' },
+      body: JSON.stringify({ gps_accuracy: gpsAcc, density: density, stage: stage }),
+      contentType: 'application/json',
+    })
+    .then(r => r.json())
+    .then(result => updateUI(result))
+    .catch(e => console.error('Simulation error:', e));
+  }
+
+  // Event listeners
+  sliderGps.addEventListener('change', runSimulation);
+  sliderDensity.addEventListener('change', runSimulation);
+  selectStage.addEventListener('change', runSimulation);
+  btnRun.addEventListener('click', runSimulation);
+
+  btnAutoFix.addEventListener('click', function() {
+    sliderGps.value = 4.2;
+    sliderGpsVal.textContent = '4.2 m';
+    sliderDensity.value = 1250;
+    sliderDensityVal.textContent = '1.250 con/m²';
+    selectStage.value = 'tro_chin';
+    runSimulation();
+  });
+
+  // Preset buttons
+  document.querySelectorAll('.preset-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+      document.querySelectorAll('.preset-btn').forEach(b => {
+        b.classList.remove('bg-primary/10', 'ring-2', 'ring-primary', 'shadow-sm', 'bg-error-container/30', 'ring-1', 'ring-tertiary');
+        b.classList.add('bg-surface-container-low/60');
+      });
+      this.classList.remove('bg-surface-container-low/60');
+      this.classList.add('bg-primary/10', 'ring-2', 'ring-primary', 'shadow-sm');
+
+      const gps = this.getAttribute('data-gps');
+      const dens = this.getAttribute('data-density');
+      const st = this.getAttribute('data-stage');
+
+      sliderGps.value = gps;
+      sliderGpsVal.textContent = gps + ' m';
+      sliderDensity.value = dens;
+      sliderDensityVal.textContent = parseInt(dens).toLocaleString('vi-VN') + ' con/m²';
+      selectStage.value = st;
+
+      runSimulation();
+    });
+  });
+
+  // Slider input feedback
+  sliderGps.addEventListener('input', e => sliderGpsVal.textContent = e.target.value + ' m');
+  sliderDensity.addEventListener('input', e => sliderDensityVal.textContent = parseInt(e.target.value).toLocaleString('vi-VN') + ' con/m²');
+
+  // Initial run
+  runSimulation();
+});
+</script>
+{% endblock %}

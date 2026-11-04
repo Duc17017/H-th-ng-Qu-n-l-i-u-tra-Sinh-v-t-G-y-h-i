@@ -1,0 +1,67 @@
+{% extends "base_public.html" %}
+{% block title %}Đăng nhập{% endblock %}
+
+{% block content %}
+<div class="max-w-md mx-auto py-space-3xl">
+  <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
+    <div class="bg-primary-container p-space-xl flex flex-col items-center gap-space-sm text-white">
+      <div class="w-14 h-14 rounded-2xl bg-white/15 flex items-center justify-center">
+        <span class="msym text-[30px]">local_florist</span>
+      </div>
+      <h1 class="font-headline-lg text-headline-lg font-bold">Đăng nhập hệ thống</h1>
+      <p class="font-body-sm text-body-sm text-white/80 text-center">Cổng nghiệp vụ dành cho cán bộ Chi cục TT &amp; BVTV</p>
+    </div>
+
+    <form method="post" novalidate class="p-space-xl flex flex-col gap-space-md">
+      {% csrf_token %}
+      {% if form.non_field_errors %}
+      <div class="flex items-start gap-space-sm px-space-md py-space-sm rounded-xl bg-error-container text-on-error-container font-body-sm">
+        <span class="msym text-[18px]">error</span>
+        <div>{{ form.non_field_errors }}</div>
+      </div>
+      {% endif %}
+
+      <div class="flex flex-col gap-1">
+        <label class="tw-label" for="{{ form.username.id_for_label }}">Tài khoản</label>
+        <div class="relative">
+          <span class="msym absolute left-3 top-1/2 -translate-y-1/2 text-[20px] text-outline">person</span>
+          <input class="tw-input pl-10" type="text" name="username" id="{{ form.username.id_for_label }}"
+                 autocomplete="username" autofocus required placeholder="Tên đăng nhập">
+        </div>
+      </div>
+
+      <div class="flex flex-col gap-1">
+        <label class="tw-label" for="{{ form.password.id_for_label }}">Mật khẩu</label>
+        <div class="relative">
+          <span class="msym absolute left-3 top-1/2 -translate-y-1/2 text-[20px] text-outline">lock</span>
+          <input class="tw-input pl-10" type="password" name="password" id="{{ form.password.id_for_label }}"
+                 autocomplete="current-password" required placeholder="••••••••">
+        </div>
+      </div>
+
+      <input type="hidden" name="next" value="{{ next }}">
+      <button class="h-11 rounded-xl bg-primary hover:bg-primary-container text-white font-label-lg inline-flex items-center justify-center gap-2 mt-space-sm" type="submit">
+        <span class="msym text-[20px]">login</span>Đăng nhập
+      </button>
+
+      <a href="{% url 'cms:home' %}" class="font-label-md text-label-md text-on-surface-variant hover:text-primary text-center">
+        ← Về cổng thông tin công cộng
+      </a>
+    </form>
+  </div>
+
+  <p class="font-label-sm text-label-sm text-outline text-center mt-space-md">
+    Hệ thống ghi nhận lịch sử đăng nhập phục vụ truy vết an toàn thông tin.
+  </p>
+</div>
+
+<style>
+  .tw-input { width: 100%; height: 2.75rem; padding: 0 0.75rem; border-radius: 0.5rem;
+              background: #fff; border: 1px solid #becabc; color: #0d1c2f;
+              font-family: Inter; font-size: 14px; outline: none; }
+  .tw-input:focus { border-color: #00652c; box-shadow: 0 0 0 2px rgba(0,101,44,.12); }
+  .tw-input.pl-10 { padding-left: 2.5rem; }
+  .tw-label { display: block; font-family: Inter; font-size: 11px; font-weight: 600;
+              letter-spacing: .02em; text-transform: uppercase; color: #3f493f; }
+</style>
+{% endblock %}

@@ -1,0 +1,95 @@
+{% extends "base_ui.html" %}
+{% load ui %}
+{% block title %}{{ rep.title }}{% endblock %}
+
+{% block page_header %}
+<div class="pt-space-md pb-space-md flex flex-wrap items-end justify-between gap-space-md">
+  <div class="min-w-0">
+    <nav class="flex flex-wrap items-center gap-1 text-on-surface-variant font-label-md mb-space-xs">
+      <a href="{% url 'reports:list' %}" class="hover:text-primary">Báo cáo</a>
+      <span class="msym text-[14px] text-outline">chevron_right</span>
+      <span class="text-primary font-semibold truncate">{{ tpl.code }}</span>
+    </nav>
+    <h1 class="font-display-sm text-display-sm text-on-surface tracking-tight">{{ rep.title }}</h1>
+    <p class="font-body-md text-body-md text-on-surface-variant mt-space-2xs">
+      Kỳ báo cáo {{ d_from|vn_date }} – {{ d_to|vn_date }}{% if tpl.approved_by %} · {{ tpl.approved_by }}{% endif %}
+    </p>
+  </div>
+  {% if can_export %}
+  <div class="flex flex-wrap items-center gap-space-sm">
+    <a class="h-10 px-space-md rounded-xl bg-primary hover:bg-primary-container text-white font-label-lg inline-flex items-center gap-1.5"
+       href="{% url 'reports:export' tpl.code 'xlsx' %}?{{ request.GET.urlencode }}">
+      <span class="msym text-[18px]">table_view</span>Excel
+    </a>
+    <a class="h-10 px-space-md rounded-xl bg-tertiary-container hover:bg-tertiary text-white font-label-lg inline-flex items-center gap-1.5"
+       href="{% url 'reports:export' tpl.code 'pdf' %}?{{ request.GET.urlencode }}">
+      <span class="msym text-[18px]">picture_as_pdf</span>PDF
+    </a>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block content %}
+<form class="bg-white rounded-xl shadow-sm p-space-md grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-space-sm items-end mb-space-md" method="get">
+  <div class="flex flex-col gap-1">
+    <label class="tw-label" for="date_from">Từ ngày</label>
+    <input class="tw-input" type="date" id="date_from" name="date_from" value="{{ d_from|date:'Y-m-d' }}">
+  </div>
+  <div class="flex flex-col gap-1">
+    <label class="tw-label" for="date_to">Đến ngày</label>
+    <input class="tw-input" type="date" id="date_to" name="date_to" value="{{ d_to|date:'Y-m-d' }}">
+  </div>
+  <div class="flex flex-col gap-1">
+    <label class="tw-label" for="crop">Cây trồng</label>
+    <select class="tw-input" id="crop" name="crop">
+      <option value="">Tất cả</option>
+      {% for c in crops %}<option value="{{ c.pk }}" {% if p.crop == c.pk|stringformat:"s" %}selected{% endif %}>{{ c.name }}</option>{% endfor %}
+    </select>
+  </div>
+  <div class="flex flex-col gap-1">
+    <label class="tw-label" for="division">Địa bàn</label>
+    <select class="tw-input" id="division" name="division">
+      <option value="">Tất cả</option>
+      {% for c in divisions %}<option value="{{ c.pk }}" {% if p.division == c.pk|stringformat:"s" %}selected{% endif %}>{{ c.name }}</option>{% endfor %}
+    </select>
+  </div>
+  <button class="h-10 rounded-xl bg-primary text-white font-label-lg inline-flex items-center justify-center gap-1.5" type="submit">
+    <span class="msym text-[18px]">refresh</span>Xem
+  </button>
+</form>
+
+{% if rep.summary %}
+<div class="flex flex-wrap gap-space-sm mb-space-md">
+  {% for label, val in rep.summary %}
+  <div class="bg-white rounded-xl shadow-sm px-space-md py-space-sm flex flex-col">
+    <span class="font-label-sm text-label-sm text-on-surface-variant uppercase">{{ label }}</span>
+    <span class="font-headline-sm text-headline-sm text-on-surface font-data-tabular">{{ val }}</span>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<div class="bg-white rounded-xl shadow-sm overflow-hidden">
+  <div class="overflow-x-auto">
+    <table class="w-full text-left border-collapse">
+      <thead>
+        <tr class="bg-surface-container text-on-surface-variant font-label-sm text-label-sm uppercase tracking-wider">
+          {% for h in rep.headers %}<th class="py-space-sm px-space-md whitespace-nowrap">{{ h }}</th>{% endfor %}
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-outline-variant/30 font-body-sm">
+        {% for row in rep.rows %}
+        <tr class="hover:bg-surface-container-low">
+          {% for c in row %}
+          <td class="py-space-sm px-space-md {% if forloop.first %}font-title-md text-title-md text-on-surface{% else %}font-data-tabular{% endif %}">{{ c|default_if_none:"—" }}</td>
+          {% endfor %}
+        </tr>
+        {% empty %}
+        <tr><td colspan="{{ rep.headers|length }}" class="py-space-3xl text-center text-on-surface-variant">Không có dữ liệu trong kỳ.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

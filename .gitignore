@@ -1,0 +1,31 @@
+# ── Python ───────────────────────────────────────────────────────────────────
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+
+# ── Dữ liệu cục bộ — không đưa lên kho mã ────────────────────────────────────
+.env
+db.sqlite3
+media/
+backups/
+staticfiles/
+logs/
+
+# ── Công cụ frontend ─────────────────────────────────────────────────────────
+node_modules/
+package-lock.json
+
+# ── Tài nguyên tự host: BẮT BUỘC commit ──────────────────────────────────────
+# static/vendor/ chứa Leaflet, Chart.js và font — máy đích thường không có
+# internet để tải lại. Không thêm vào .gitignore.
+!static/vendor/
+!static/css/app.css
+
+# ── Hệ điều hành / trình soạn thảo ──────────────────────────────────────────
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/
+*.bak

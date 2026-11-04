@@ -1,0 +1,298 @@
+{% load static ui %}<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}{{ APP_NAME }}{% endblock %}</title>
+
+    <link rel="stylesheet" href="{% static 'css/app.css' %}">
+    <link rel="stylesheet" href="{% static 'css/leaflet_tailwind_fix.css' %}">
+    <style>
+        html, body { margin: 0; padding: 0; }
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-thumb { background: #becabc; border-radius: 9999px; }
+        .msym { font-family: 'Material Symbols Outlined'; font-weight: normal; font-style: normal;
+                line-height: 1; letter-spacing: normal; text-transform: none; display: inline-block;
+                white-space: nowrap; word-wrap: normal; direction: ltr;
+                -webkit-font-feature-settings: 'liga'; -webkit-font-smoothing: antialiased; }
+        /* Form controls trong nội dung */
+        .tw-input { width: 100%; height: 2.5rem; padding: 0 0.75rem; border-radius: 0.5rem;
+                    background: #fff; border: 1px solid #becabc; color: #0d1c2f;
+                    font-family: Inter; font-size: 14px; outline: none; }
+        .tw-input:focus { border-color: #00652c; box-shadow: 0 0 0 2px rgba(0,101,44,.12); }
+        textarea.tw-input { height: auto; padding: 0.5rem 0.75rem; line-height: 1.45; }
+        select.tw-input { appearance: none; background-image: none; }
+        .tw-label { display: block; font-family: Inter; font-size: 11px; font-weight: 600;
+                    letter-spacing: .02em; text-transform: uppercase; color: #3f493f;
+                    margin-bottom: 0.25rem; }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+<body class="bg-surface font-sans text-on-surface antialiased">
+
+<!-- ══════════════ SIDEBAR ══════════════ -->
+<aside class="fixed left-0 top-0 h-full w-64 bg-surface-container-low shadow-[0_1px_8px_rgba(0,0,0,0.04)] z-50 flex flex-col justify-between">
+    <div class="flex flex-col overflow-y-auto">
+        <a href="{% url 'cms:home' %}" class="h-16 px-space-lg flex items-center gap-space-sm shrink-0">
+            <div class="w-9 h-9 rounded-xl bg-primary flex items-center justify-center shrink-0">
+                <span class="msym text-white text-[22px]">local_florist</span>
+            </div>
+            <div class="flex flex-col min-w-0">
+                <span class="font-headline-sm text-headline-sm text-primary tracking-tight truncate">AgriGov TT&amp;BVTV</span>
+                <span class="font-label-sm text-label-sm text-on-surface-variant uppercase truncate">Hệ thống cấp tỉnh</span>
+            </div>
+        </a>
+
+        <div class="px-space-md py-space-sm">
+            <div class="bg-white p-space-sm rounded-xl shadow-[0_1px_8px_rgba(0,0,0,0.04)] flex flex-col gap-space-2xs">
+                <span class="font-label-sm text-label-sm text-on-surface-variant uppercase">Đơn vị quản lý</span>
+                <span class="font-title-md text-title-md text-on-surface truncate">{{ user.unit.name|default:"Chi cục TT & BVTV" }}</span>
+            </div>
+        </div>
+
+        <nav class="px-space-md py-space-xs flex flex-col gap-space-2xs pb-space-lg">
+            {% url 'reports:dashboard' as u_dash %}
+            {% if perms_map.report %}
+            <a href="{{ u_dash }}" class="ui-nav {% if request.path == u_dash %}is-active{% endif %}">
+                <span class="msym text-[20px]">grid_view</span><span>Tổng quan giám sát</span>
+            </a>
+            {% endif %}
+
+            {% url 'mapview:map' as u_map %}
+            {% if perms_map.map %}
+            <a href="{{ u_map }}" class="ui-nav {% if request.path == u_map %}is-active{% endif %}">
+                <span class="msym text-[20px]">map</span><span>Bản đồ dịch tễ GIS</span>
+            </a>
+            {% endif %}
+
+            {% if perms_map.plans or perms_map.records %}
+            <div class="mt-space-xs px-space-md pt-space-xs pb-space-2xs">
+                <span class="font-label-sm text-label-sm text-outline uppercase">Điều tra &amp; dữ liệu</span>
+            </div>
+            {% url 'surveys:plan_list' as u_plan %}
+            {% url 'surveys:task_list' as u_task %}
+            {% url 'surveys:record_list' as u_rec %}
+            {% url 'surveys:template_catalog' as u_tpl %}
+            {% if perms_map.plans %}
+            <a href="{{ u_plan }}" class="ui-nav {% if request.path == u_plan %}is-active{% endif %}">
+                <span class="msym text-[20px]">event_note</span><span>Kế hoạch điều tra</span>
+            </a>
+            <a href="{{ u_task }}" class="ui-nav {% if request.path == u_task %}is-active{% endif %}">
+                <span class="msym text-[20px]">checklist</span><span>Nhiệm vụ của tôi</span>
+            </a>
+            <a href="{{ u_tpl }}" class="ui-nav {% if request.path == u_tpl %}is-active{% endif %}">
+                <span class="msym text-[20px]">description</span><span>Biểu mẫu QCVN</span>
+            </a>
+            {% endif %}
+            {% if perms_map.records %}
+            <a href="{{ u_rec }}" class="ui-nav {% if request.path == u_rec %}is-active{% endif %}">
+                <span class="msym text-[20px]">assignment</span><span>Phiếu điều tra</span>
+            </a>
+            {% endif %}
+            {% endif %}
+
+            {% if perms_map.forecast or perms_map.alert %}
+            <div class="mt-space-xs px-space-md pt-space-xs pb-space-2xs">
+                <span class="font-label-sm text-label-sm text-outline uppercase">Dự báo &amp; cảnh báo</span>
+            </div>
+            {% url 'forecasts:analysis' as u_an %}
+            {% url 'forecasts:list' as u_fc %}
+            {% url 'alerts:alert_list' as u_al %}
+            {% url 'alerts:followup_list' as u_fu %}
+            {% if perms_map.forecast %}
+            <a href="{{ u_an }}" class="ui-nav {% if request.path == u_an %}is-active{% endif %}">
+                <span class="msym text-[20px]">trending_up</span><span>Phân tích diễn biến</span>
+            </a>
+            <a href="{{ u_fc }}" class="ui-nav {% if request.path == u_fc %}is-active{% endif %}">
+                <span class="msym text-[20px]">query_stats</span><span>Nhận định dự báo</span>
+            </a>
+            {% endif %}
+            {% if perms_map.alert %}
+            <a href="{{ u_al }}" class="ui-nav {% if request.path == u_al %}is-active{% endif %}">
+                <span class="msym text-[20px]">campaign</span><span>Cảnh báo dịch hại</span>
+            </a>
+            <a href="{{ u_fu }}" class="ui-nav {% if request.path == u_fu %}is-active{% endif %}">
+                <span class="msym text-[20px]">fact_check</span><span>Theo dõi sau cảnh báo</span>
+            </a>
+            {% endif %}
+            {% endif %}
+
+            {% if perms_map.cms or perms_map.catalog %}
+            <div class="mt-space-xs px-space-md pt-space-xs pb-space-2xs">
+                <span class="font-label-sm text-label-sm text-outline uppercase">Nội dung &amp; danh mục</span>
+            </div>
+            {% url 'cms:manage_list' as u_cms %}
+            {% url 'catalog:index' as u_cat %}
+            {% if perms_map.cms %}
+            <a href="{{ u_cms }}" class="ui-nav {% if request.path == u_cms %}is-active{% endif %}">
+                <span class="msym text-[20px]">article</span><span>Quản lý nội dung</span>
+            </a>
+            {% endif %}
+            {% if perms_map.catalog %}
+            <a href="{{ u_cat }}" class="ui-nav {% if request.path == u_cat %}is-active{% endif %}">
+                <span class="msym text-[20px]">inventory_2</span><span>Danh mục chuyên môn</span>
+            </a>
+            {% endif %}
+            {% endif %}
+
+            {% if perms_map.system %}
+            <div class="mt-space-xs px-space-md pt-space-xs pb-space-2xs">
+                <span class="font-label-sm text-label-sm text-outline uppercase">Quản trị</span>
+            </div>
+            {% url 'sysadmin:index' as u_sys %}
+            {% url 'sysadmin:audit' as u_aud %}
+            {% url 'accounts:users_list' as u_usr %}
+            {% url 'accounts:role_matrix' as u_role %}
+            {% url 'sysadmin:backups' as u_bk %}
+            <a href="{{ u_sys }}" class="ui-nav {% if request.path == u_sys %}is-active{% endif %}">
+                <span class="msym text-[20px]">admin_panel_settings</span><span>Quản trị hệ thống</span>
+            </a>
+            <a href="{{ u_aud }}" class="ui-nav {% if request.path == u_aud %}is-active{% endif %}">
+                <span class="msym text-[20px]">history</span><span>Nhật ký thao tác</span>
+            </a>
+            {% if 'view' in perms_map.system %}
+            <a href="{{ u_usr }}" class="ui-nav {% if request.path == u_usr %}is-active{% endif %}">
+                <span class="msym text-[20px]">group</span><span>Người dùng</span>
+            </a>
+            <a href="{{ u_role }}" class="ui-nav {% if request.path == u_role %}is-active{% endif %}">
+                <span class="msym text-[20px]">shield</span><span>Phân quyền RBAC</span>
+            </a>
+            {% endif %}
+            {% if 'edit' in perms_map.system %}
+            <a href="{{ u_bk }}" class="ui-nav {% if request.path == u_bk %}is-active{% endif %}">
+                <span class="msym text-[20px]">cloud_sync</span><span>Sao lưu &amp; khôi phục</span>
+            </a>
+            {% endif %}
+            {% endif %}
+        </nav>
+    </div>
+
+    <div class="p-space-md flex flex-col gap-space-sm shrink-0 border-t border-outline-variant/30">
+        <div class="bg-surface-container-high p-space-md rounded-xl flex items-center justify-between">
+            <div class="flex flex-col">
+                <span class="font-label-sm text-label-sm text-on-surface-variant">Trực ban tác chiến</span>
+                <span class="font-label-md text-label-md text-primary font-bold flex items-center gap-1">
+                    <span class="w-2 h-2 rounded-full bg-primary-container animate-pulse"></span>Sẵn sàng 24/7
+                </span>
+            </div>
+            <span class="msym text-primary text-[20px]">shield</span>
+        </div>
+        <div class="text-center">
+            <span class="font-label-sm text-label-sm text-outline">AgriGov Platform v4.2.0</span>
+        </div>
+    </div>
+</aside>
+
+<style>
+    .ui-nav { display: flex; align-items: center; gap: .5rem; padding: .5rem .75rem;
+              border-radius: .5rem; color: #3f493f; font-size: 14px;
+              transition: background-color .15s, color .15s; }
+    .ui-nav:hover { background: #e6eeff; color: #0d1c2f; }
+    .ui-nav.is-active { background: #15803d; color: #fff; font-weight: 600; }
+</style>
+
+<!-- ══════════════ MAIN ══════════════ -->
+<div class="pl-64">
+    <header class="fixed top-0 left-64 right-0 bg-surface/90 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.04)] z-40">
+        <div class="w-full h-16 px-space-xl flex items-center justify-between gap-space-lg">
+            <form action="{% url 'cms:post_list' %}" method="get" class="flex items-center gap-space-md flex-1 max-w-xl">
+                <div class="flex items-center w-full px-space-md h-10 rounded-xl bg-surface-container-low text-on-surface-variant">
+                    <span class="msym text-[20px] mr-space-sm text-outline">search</span>
+                    <input type="search" name="q" placeholder="Tìm tin tức, bản tin, hướng dẫn kỹ thuật..."
+                           class="flex-1 bg-transparent font-body-sm text-body-sm text-on-surface outline-none border-none">
+                </div>
+            </form>
+
+            <div class="flex items-center gap-space-lg shrink-0">
+                <div class="flex items-center gap-space-xs">
+                    <a href="{% url 'alerts:alert_list' %}" title="Cảnh báo đang hiệu lực"
+                       class="w-10 h-10 rounded-xl flex items-center justify-center text-on-surface-variant hover:bg-surface-container transition-colors relative">
+                        <span class="msym text-[22px]">warning</span>
+                        {% if live_alert %}<span class="absolute top-2 right-2 w-2 h-2 rounded-full bg-tertiary animate-pulse"></span>{% endif %}
+                    </a>
+                    <a href="{% url 'accounts:notifications' %}" title="Thông báo"
+                       class="w-10 h-10 rounded-xl flex items-center justify-center text-on-surface-variant hover:bg-surface-container transition-colors relative">
+                        <span class="msym text-[22px]">notifications</span>
+                        {% if unread_count %}<span class="absolute top-1 right-1 min-w-4 h-4 px-1 rounded-full bg-tertiary text-white flex items-center justify-center text-[10px] font-bold">{{ unread_count }}</span>{% endif %}
+                    </a>
+                </div>
+                <div class="h-8 w-px bg-surface-container-highest"></div>
+                <div class="relative group">
+                    <button type="button" class="flex items-center gap-space-md cursor-pointer bg-transparent border-0">
+                        <div class="flex flex-col text-right">
+                            <span class="font-title-md text-title-md text-on-surface leading-tight">{{ user.display_name }}</span>
+                            <span class="font-label-sm text-label-sm text-on-surface-variant">{{ user.get_role_display }}</span>
+                        </div>
+                        <div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center">
+                            <span class="msym text-white text-[18px]">person</span>
+                        </div>
+                    </button>
+                    <div class="hidden group-hover:block absolute right-0 top-full mt-1 w-56 bg-white rounded-xl shadow-lg p-2 z-50">
+                        <a href="{% url 'accounts:profile' %}" class="block px-3 py-2 rounded-lg font-body-sm hover:bg-surface-container">Thông tin cá nhân</a>
+                        <a href="{% url 'accounts:password_change' %}" class="block px-3 py-2 rounded-lg font-body-sm hover:bg-surface-container">Đổi mật khẩu</a>
+                        <form method="post" action="{% url 'accounts:logout' %}">{% csrf_token %}
+                            <button type="submit" class="w-full text-left px-3 py-2 rounded-lg font-body-sm hover:bg-surface-container">Đăng xuất</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {% if live_alert %}
+        <div class="bg-tertiary-container text-on-tertiary-container px-space-xl py-space-xs flex items-center gap-space-md font-label-md text-label-md">
+            <span class="msym text-[18px]">campaign</span>
+            <span class="font-semibold shrink-0">CẢNH BÁO ĐANG HIỆU LỰC:</span>
+            <span class="truncate">{{ live_alert.code }} — {{ live_alert.title }}</span>
+            <a href="{% url 'alerts:alert_detail' live_alert.pk %}" class="ml-auto shrink-0 underline hover:no-underline">Chi tiết →</a>
+        </div>
+        {% endif %}
+    </header>
+
+    <main class="w-full pt-16 px-space-xl min-h-screen pb-space-3xl">
+        {% block page_header %}
+        {% if page_title %}
+        <div class="pt-space-md pb-space-lg flex flex-wrap items-end justify-between gap-space-md">
+            <div class="min-w-0">
+                {% if breadcrumb %}
+                <nav class="flex flex-wrap items-center gap-1 text-on-surface-variant font-label-md text-label-md mb-space-xs">
+                    {% for label, href in breadcrumb %}
+                        {% if href %}<a href="{{ href }}" class="hover:text-primary">{{ label }}</a>
+                        {% else %}<span class="text-primary font-semibold">{{ label }}</span>{% endif %}
+                        {% if not forloop.last %}<span class="msym text-[14px] text-outline">chevron_right</span>{% endif %}
+                    {% endfor %}
+                </nav>
+                {% endif %}
+                <h1 class="font-display-sm text-display-sm text-on-surface tracking-tight">{{ page_title }}</h1>
+                {% if page_subtitle %}
+                <p class="font-body-md text-body-md text-on-surface-variant max-w-4xl mt-space-2xs">{{ page_subtitle }}</p>
+                {% endif %}
+            </div>
+            {% if page_actions %}<div class="flex flex-wrap items-center gap-space-sm">{{ page_actions }}</div>{% endif %}
+        </div>
+        {% endif %}
+        {% endblock %}
+
+        {% if messages %}
+        <div class="flex flex-col gap-space-xs pt-space-md">
+            {% for msg in messages %}
+            <div class="flex items-start gap-space-sm px-space-md py-space-sm rounded-xl
+                {% if msg.tags == 'error' %}bg-error-container text-on-error-container
+                {% elif msg.tags == 'warning' %}bg-secondary-fixed text-on-secondary-fixed
+                {% elif msg.tags == 'success' %}bg-primary-fixed text-on-primary-fixed
+                {% else %}bg-surface-container text-on-surface{% endif %}">
+                <span class="msym text-[18px] shrink-0">
+                    {% if msg.tags == 'error' %}error{% elif msg.tags == 'warning' %}warning{% elif msg.tags == 'success' %}check_circle{% else %}info{% endif %}
+                </span>
+                <span class="font-body-sm text-body-sm">{{ msg }}</span>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        {% block content %}{% endblock %}
+    </main>
+</div>
+
+{% block extra_js %}{% endblock %}
+</body>
+</html>

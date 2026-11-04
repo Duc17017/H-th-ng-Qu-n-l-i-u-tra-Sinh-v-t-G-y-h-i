@@ -1,0 +1,89 @@
+{% extends "base_ui.html" %}
+{% load ui %}
+{% block title %}{{ crud.title }}{% endblock %}
+
+{% block page_header %}
+<div class="pt-space-md pb-space-lg flex flex-wrap items-end justify-between gap-space-md">
+  <div class="min-w-0">
+    <nav class="flex flex-wrap items-center gap-1 text-on-surface-variant font-label-md text-label-md mb-space-xs">
+      <a href="{% url 'cms:home' %}" class="hover:text-primary">Trang chủ</a>
+      <span class="msym text-[14px] text-outline">chevron_right</span>
+      <span class="text-primary font-semibold">{{ crud.title }}</span>
+    </nav>
+    <h1 class="font-display-sm text-display-sm text-on-surface tracking-tight">{{ crud.title }}</h1>
+  </div>
+  {% if can_create %}
+  <a href="{{ create_url }}"
+     class="h-10 px-space-lg rounded-xl bg-primary hover:bg-primary-container text-white font-label-lg text-label-lg inline-flex items-center gap-2 shadow-sm transition-colors">
+    <span class="msym text-[20px]">add</span><span>Thêm mới</span>
+  </a>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="bg-white rounded-xl shadow-sm overflow-hidden">
+  <form method="get" class="p-space-md bg-surface-container-low border-b border-outline-variant/30 flex flex-wrap items-end gap-space-sm">
+    {% if crud.search %}
+    <div class="flex flex-col gap-1 min-w-56 flex-1">
+      <label class="tw-label" for="q">Tìm kiếm</label>
+      <input class="tw-input" id="q" type="search" name="q" value="{{ q }}" placeholder="Nhập từ khóa...">
+    </div>
+    {% endif %}
+    {% for name, label, opts in filter_defs %}
+    <div class="flex flex-col gap-1 min-w-44">
+      <label class="tw-label" for="f_{{ name }}">{{ label }}</label>
+      <select class="tw-input" id="f_{{ name }}" name="{{ name }}">
+        <option value="">Tất cả</option>
+        {% for val, text in opts %}
+        <option value="{{ val }}" {% if request.GET|get_item:name == val|stringformat:"s" %}selected{% endif %}>{{ text }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    {% endfor %}
+    <button class="h-10 px-space-md rounded-xl bg-primary text-white font-label-lg text-label-lg inline-flex items-center gap-1.5" type="submit">
+      <span class="msym text-[18px]">filter_alt</span><span>Lọc</span>
+    </button>
+    <a class="h-10 px-space-md rounded-xl bg-surface-container text-on-surface font-label-lg text-label-lg inline-flex items-center" href="?">Xóa lọc</a>
+  </form>
+
+  <div class="overflow-x-auto">
+    <table class="w-full text-left border-collapse">
+      <thead>
+        <tr class="bg-surface-container text-on-surface-variant font-label-sm text-label-sm uppercase tracking-wider">
+          {% for h in headers %}<th class="py-space-sm px-space-md font-semibold">{{ h }}</th>{% endfor %}
+          <th class="py-space-sm px-space-md w-32"></th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-outline-variant/30">
+        {% for row in rows %}
+        <tr class="hover:bg-surface-container-low transition-colors font-body-sm text-body-sm">
+          {% for c in row.cells %}
+          <td class="py-space-sm px-space-md text-on-surface">
+            {% if forloop.first %}
+              <a href="{{ row.detail_url }}" class="font-title-md text-title-md text-on-surface hover:text-primary">{{ c|default_if_none:"—" }}</a>
+            {% else %}{{ c|default_if_none:"—" }}{% endif %}
+          </td>
+          {% endfor %}
+          <td class="py-space-sm px-space-md text-right whitespace-nowrap">
+            <a href="{{ row.detail_url }}" class="inline-flex w-8 h-8 items-center justify-center rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface" title="Xem">
+              <span class="msym text-[18px]">visibility</span>
+            </a>
+            {% if row.editable %}
+            <a href="{{ row.edit_url }}" class="inline-flex w-8 h-8 items-center justify-center rounded-lg bg-surface-container hover:bg-primary-fixed hover:text-primary text-on-surface" title="Sửa">
+              <span class="msym text-[18px]">edit</span>
+            </a>
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="{{ headers|length|add:1 }}" class="py-space-3xl text-center text-on-surface-variant font-body-md">
+          <span class="msym text-[40px] block opacity-30 mb-2">inbox</span>Chưa có dữ liệu.
+        </td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% include "partials/pagination.html" %}
+{% endblock %}

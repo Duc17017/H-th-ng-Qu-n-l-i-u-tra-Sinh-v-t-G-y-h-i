@@ -1,0 +1,75 @@
+﻿{% extends "base_ui.html" %}
+{% load ui %}
+{% block title %}Báo cáo{% endblock %}
+
+{% block page_header %}
+<div class="pt-space-md pb-space-md flex flex-wrap items-end justify-between gap-space-md">
+  <div class="min-w-0">
+    <nav class="flex flex-wrap items-center gap-1 text-on-surface-variant font-label-md mb-space-xs">
+      <a href="{{ home_url }}" class="hover:text-primary">Tổng quan</a>
+      <span class="msym text-[14px] text-outline">chevron_right</span>
+      <span class="text-primary font-semibold">Báo cáo</span>
+    </nav>
+    <h1 class="font-display-sm text-display-sm text-on-surface tracking-tight">Báo cáo và thống kê</h1>
+  </div>
+  <a class="h-10 px-space-md rounded-xl bg-surface-container hover:bg-surface-container-high text-on-surface font-label-lg inline-flex items-center gap-1.5" href="{% url 'reports:dashboard' %}">
+    <span class="msym text-[18px]">dashboard</span>Bảng điều hành
+  </a>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-space-lg">
+  <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+    <div class="px-space-lg py-space-sm bg-surface-container-low flex items-center gap-2">
+      <span class="msym text-[18px] text-primary">description</span>
+      <h2 class="font-headline-sm text-headline-sm text-on-surface">Mẫu báo cáo</h2>
+      <span class="px-2 py-0.5 rounded-full bg-surface-container text-on-surface-variant font-label-sm ml-auto">{{ templates|length }}</span>
+    </div>
+    <div class="divide-y divide-outline-variant/30">
+      {% for t in templates %}
+      <a href="{% url 'reports:view' t.code %}" class="group flex items-start gap-space-md px-space-lg py-space-sm hover:bg-surface-container-low transition-colors">
+        <div class="w-9 h-9 rounded-xl bg-primary-fixed flex items-center justify-center shrink-0">
+          <span class="msym text-[20px] text-primary">article</span>
+        </div>
+        <div class="min-w-0 flex-1">
+          <span class="block font-title-md text-title-md text-on-surface group-hover:text-primary">{{ t.name }}</span>
+          <span class="block font-label-sm text-label-sm text-outline">
+            {{ t.get_kind_display }}{% if t.approved_by %} · {{ t.approved_by }}{% endif %}
+          </span>
+        </div>
+        <span class="msym text-[20px] text-outline group-hover:text-primary shrink-0">chevron_right</span>
+      </a>
+      {% empty %}
+      <div class="px-space-lg py-space-xl text-center font-body-sm text-on-surface-variant">
+        Chưa có mẫu báo cáo. Chạy lệnh <code class="bg-surface-container px-1 rounded">seed_demo</code> hoặc tạo trong phần Quản trị.
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+    <div class="px-space-lg py-space-sm bg-surface-container-low flex items-center gap-2">
+      <span class="msym text-[18px] text-primary">folder_zip</span>
+      <h2 class="font-headline-sm text-headline-sm text-on-surface">Báo cáo tự động gần đây</h2>
+    </div>
+    <div class="divide-y divide-outline-variant/30">
+      {% for g in generated %}
+      <div class="flex items-center justify-between gap-space-sm px-space-lg py-space-sm">
+        <div class="min-w-0">
+          <span class="block font-body-sm text-body-sm text-on-surface truncate">{{ g.title }}</span>
+          <span class="block font-label-sm text-label-sm text-outline">{{ g.created_at|vn_date }}</span>
+        </div>
+        {% if can_export %}
+        <a class="h-8 px-space-sm rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface font-label-md inline-flex items-center gap-1 shrink-0" href="{{ g.file.url }}">
+          <span class="msym text-[16px]">download</span>Tải
+        </a>
+        {% endif %}
+      </div>
+      {% empty %}
+      <div class="px-space-lg py-space-xl text-center font-body-sm text-on-surface-variant">Chưa có báo cáo tự động.</div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endblock %}

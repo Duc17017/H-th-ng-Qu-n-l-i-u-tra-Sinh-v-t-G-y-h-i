@@ -1,0 +1,69 @@
+/* ============================================================================
+   Leaflet + Tailwind CSS Compatibility Fixes
+   ============================================================================
+   
+   Tailwind CSS resets max-width on images, which breaks Leaflet tile rendering.
+   This file restores Leaflet's expected styles while preserving Tailwind elsewhere.
+   
+   USAGE: Include after Tailwind CDN in base_ui.html:
+   <link rel="stylesheet" href="{% static 'css/leaflet_tailwind_fix.css' %}">
+   
+   Last updated: 01/11/2026
+   ========================================================================= */
+
+/* Fix Leaflet map tiles breaking due to Tailwind's img reset */
+.leaflet-container img {
+    max-width: none !important;
+    max-height: none !important;
+}
+
+.leaflet-tile {
+    max-width: none !important;
+    border: none !important;
+}
+
+/* Fix Leaflet zoom controls positioning */
+.leaflet-control-zoom,
+.leaflet-control-attribution {
+    margin: 0 !important;
+}
+
+/* Prevent Tailwind border-box from affecting Leaflet internal calculations */
+.leaflet-container,
+.leaflet-container * {
+    box-sizing: content-box !important;
+}
+
+/* Fix Leaflet popup z-index conflicts with Tailwind's utility classes */
+.leaflet-popup {
+    z-index: 1000 !important;
+}
+
+.leaflet-marker-icon,
+.leaflet-marker-shadow {
+    max-width: none !important;
+}
+
+/* Restore Leaflet's default cursor */
+.leaflet-interactive {
+    cursor: pointer !important;
+}
+
+.leaflet-grab {
+    cursor: grab !important;
+}
+
+.leaflet-grabbing {
+    cursor: grabbing !important;
+}
+
+/* Fix Leaflet control corners */
+.leaflet-top,
+.leaflet-bottom {
+    pointer-events: none !important;
+}
+
+.leaflet-top .leaflet-control,
+.leaflet-bottom .leaflet-control {
+    pointer-events: auto !important;
+}

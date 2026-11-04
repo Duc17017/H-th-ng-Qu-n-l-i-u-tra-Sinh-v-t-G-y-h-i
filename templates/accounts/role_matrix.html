@@ -1,0 +1,63 @@
+{% extends "base_ui.html" %}
+{% load ui %}
+{% block title %}Phân quyền theo vai trò{% endblock %}
+
+{% block page_header %}
+<div class="pt-space-md pb-space-md">
+  <nav class="flex flex-wrap items-center gap-1 text-on-surface-variant font-label-md mb-space-xs">
+    <a href="{% url 'sysadmin:index' %}" class="hover:text-primary">Quản trị hệ thống</a>
+    <span class="msym text-[14px] text-outline">chevron_right</span>
+    <span class="text-primary font-semibold">Phân quyền RBAC</span>
+  </nav>
+  <h1 class="font-display-sm text-display-sm text-on-surface tracking-tight">Phân quyền theo vai trò (RBAC)</h1>
+  <p class="font-body-md text-body-md text-on-surface-variant max-w-4xl mt-space-2xs">
+    Vai trò "Quản trị hệ thống" luôn có toàn quyền. Phạm vi địa bàn được giới hạn theo địa bàn phụ trách của từng người dùng.
+  </p>
+</div>
+{% endblock %}
+
+{% block content %}
+<form method="post" class="flex flex-col gap-space-lg">
+  {% csrf_token %}
+  {% for r in matrix %}
+  <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+    <div class="px-space-lg py-space-sm bg-surface-container-low flex items-center gap-2">
+      <span class="msym text-[18px] text-primary">shield</span>
+      <h2 class="font-headline-sm text-headline-sm text-on-surface">{{ r.label }}</h2>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-left border-collapse">
+        <thead>
+          <tr class="bg-surface-container text-on-surface-variant font-label-sm text-label-sm uppercase tracking-wider">
+            <th class="py-space-sm px-space-md">Phân hệ</th>
+            {% for key, label in actions.items %}
+            <th class="py-space-sm px-space-md text-center">{{ label }}</th>
+            {% endfor %}
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-outline-variant/30 font-body-sm">
+          {% for mod in r.mods %}
+          <tr class="hover:bg-surface-container-low">
+            <th class="py-space-sm px-space-md font-normal text-on-surface text-left">{{ mod.label }}</th>
+            {% for c in mod.cells %}
+            <td class="py-space-sm px-space-md text-center">
+              <input class="w-4 h-4 rounded accent-primary cursor-pointer" type="checkbox"
+                     name="{{ c.name }}" value="1" {% if c.on %}checked{% endif %}
+                     aria-label="{{ r.label }} - {{ mod.label }} - {{ c.action }}">
+            </td>
+            {% endfor %}
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endfor %}
+
+  <div class="sticky bottom-4 flex justify-end">
+    <button class="h-11 px-space-xl rounded-xl bg-primary hover:bg-primary-container text-white font-label-lg inline-flex items-center gap-2 shadow-lg" type="submit">
+      <span class="msym text-[20px]">save</span>Lưu phân quyền
+    </button>
+  </div>
+</form>
+{% endblock %}

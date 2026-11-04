@@ -1,0 +1,265 @@
+﻿{% extends "base_ui.html" %}
+{% load ui static %}
+{% block title %}Bản đồ dịch tễ GIS{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'vendor/leaflet/leaflet.css' %}">
+<style>
+    #map { height: calc(100vh - 19rem); min-height: 30rem; border-radius: 0.5rem; z-index: 0; }
+    .leaflet-container { font-family: Inter, sans-serif; }
+    .leaflet-bar a { border-radius: 0.375rem !important; }
+    .hud-overlay { background: rgba(255,255,255,.94); backdrop-filter: blur(8px); }
+</style>
+{% endblock %}
+
+{% block page_header %}
+<div class="pt-space-md pb-space-md flex flex-wrap items-end justify-between gap-space-md">
+    <div class="min-w-0">
+        <nav class="flex flex-wrap items-center gap-1 text-on-surface-variant font-label-md mb-space-xs">
+            <a href="{{ home_url }}" class="hover:text-primary">Tổng quan</a>
+            <span class="msym text-[14px] text-outline">chevron_right</span>
+            <span class="text-primary font-semibold">Bản đồ dịch tễ GIS</span>
+        </nav>
+        <h1 class="font-display-sm text-display-sm text-on-surface tracking-tight">Bản đồ điều tra &amp; giám sát sinh vật gây hại</h1>
+        <p class="font-body-md text-body-md text-on-surface-variant mt-space-2xs">
+            Phân bố điểm điều tra, mức độ gây hại theo tỷ lệ hại mới nhất đã được xác nhận.
+        </p>
+    </div>
+    <div class="flex flex-wrap items-center gap-space-sm">
+        {% if can_import %}
+        <button type="button" id="btn-import"
+                class="h-10 px-space-md rounded-xl bg-surface-container hover:bg-surface-container-high text-on-surface font-label-lg inline-flex items-center gap-1.5">
+            <span class="msym text-[18px]">upload</span>Nhập GeoJSON
+        </button>
+        {% endif %}
+        {% if can_export %}
+        <a id="exp" href="{% url 'mapview:export' %}"
+           class="h-10 px-space-md rounded-xl bg-primary hover:bg-primary-container text-white font-label-lg inline-flex items-center gap-1.5 shadow-sm">
+            <span class="msym text-[18px]">download</span>Xuất GeoJSON
+        </a>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+{% if can_import %}
+<div id="imp" class="hidden mb-space-md">
+    <form class="bg-white rounded-xl shadow-sm p-space-md flex flex-wrap items-end gap-space-sm"
+          method="post" enctype="multipart/form-data" action="{% url 'mapview:import' %}">
+        {% csrf_token %}
+        <div class="flex flex-col gap-1 flex-1 min-w-64">
+            <label class="tw-label" for="gj">Tệp GeoJSON (Point — properties: code, name, division_code)</label>
+            <input class="tw-input py-1.5" id="gj" type="file" name="file" accept=".geojson,.json" required>
+        </div>
+        <button class="h-10 px-space-md rounded-xl bg-primary text-white font-label-lg" type="submit">Nhập dữ liệu</button>
+    </form>
+</div>
+{% endif %}
+
+<div class="grid grid-cols-1 xl:grid-cols-12 gap-space-md">
+    <!-- Map + filters -->
+    <div class="xl:col-span-9 flex flex-col gap-space-md">
+        <form id="flt" class="bg-white rounded-xl shadow-sm p-space-md grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-space-sm">
+            <div class="flex flex-col gap-1">
+                <label class="tw-label" for="date_from">Từ ngày</label>
+                <input class="tw-input" id="date_from" type="date" name="date_from">
+            </div>
+            <div class="flex flex-col gap-1">
+                <label class="tw-label" for="date_to">Đến ngày</label>
+                <input class="tw-input" id="date_to" type="date" name="date_to">
+            </div>
+            <div class="flex flex-col gap-1">
+                <label class="tw-label" for="crop">Cây trồng</label>
+                <select class="tw-input" id="crop" name="crop">
+                    <option value="">Tất cả</option>
+                    {% for c in crops %}<option value="{{ c.pk }}">{{ c.name }}</option>{% endfor %}
+                </select>
+            </div>
+            <div class="flex flex-col gap-1">
+                <label class="tw-label" for="pest">Sinh vật</label>
+                <select class="tw-input" id="pest" name="pest">
+                    <option value="">Tất cả</option>
+                    {% for c in pests %}<option value="{{ c.pk }}">{{ c.name }}</option>{% endfor %}
+                </select>
+            </div>
+            <div class="flex flex-col gap-1">
+                <label class="tw-label" for="division">Địa bàn</label>
+                <select class="tw-input" id="division" name="division">
+                    <option value="">Tất cả</option>
+                    {% for c in divisions %}<option value="{{ c.pk }}">{{ c.name }}</option>{% endfor %}
+                </select>
+            </div>
+            <div class="flex items-end gap-space-xs">
+                <button class="h-10 flex-1 rounded-xl bg-primary text-white font-label-lg inline-flex items-center justify-center gap-1.5" type="submit">
+                    <span class="msym text-[18px]">filter_alt</span>Áp dụng
+                </button>
+                <button type="button" id="btn-reset" title="Xóa lọc"
+                        class="h-10 w-10 rounded-xl bg-surface-container hover:bg-surface-container-high text-on-surface inline-flex items-center justify-center">
+                    <span class="msym text-[18px]">restart_alt</span>
+                </button>
+            </div>
+        </form>
+
+        <div class="relative bg-white rounded-xl shadow-sm p-space-sm">
+            <div id="map" role="application" aria-label="Bản đồ điểm điều tra"></div>
+
+            <!-- Legend HUD -->
+            <div class="hud-overlay absolute bottom-6 left-6 rounded-xl shadow-lg px-space-md py-space-sm z-[500]">
+                <div class="font-label-sm text-label-sm text-on-surface-variant uppercase mb-1.5">Mức độ gây hại</div>
+                <div class="grid grid-cols-2 gap-x-space-md gap-y-1 font-label-md text-label-md">
+                    <span class="flex items-center gap-1.5"><i class="w-3 h-3 rounded-full" style="background:#9e9e9e"></i>Chưa có dữ liệu</span>
+                    <span class="flex items-center gap-1.5"><i class="w-3 h-3 rounded-full" style="background:#43a047"></i>Thấp (&lt;10%)</span>
+                    <span class="flex items-center gap-1.5"><i class="w-3 h-3 rounded-full" style="background:#fdd835"></i>Trung bình (10–30%)</span>
+                    <span class="flex items-center gap-1.5"><i class="w-3 h-3 rounded-full" style="background:#fb8c00"></i>Cao (30–50%)</span>
+                    <span class="flex items-center gap-1.5 col-span-2"><i class="w-3 h-3 rounded-full" style="background:#c62828"></i>Rất cao (≥50%)</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Side panel -->
+    <div class="xl:col-span-3 flex flex-col gap-space-md">
+        <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+            <div class="px-space-md py-space-sm bg-surface-container-low flex items-center gap-2">
+                <span class="msym text-[18px] text-primary">pin_drop</span>
+                <h2 class="font-headline-sm text-headline-sm text-on-surface">Chi tiết điểm</h2>
+            </div>
+            <div id="detail" class="p-space-md font-body-sm text-body-sm text-on-surface-variant max-h-80 overflow-y-auto">
+                Chọn một điểm trên bản đồ.
+            </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+            <div class="px-space-md py-space-sm bg-surface-container-low flex items-center gap-2">
+                <span class="msym text-[18px] text-primary">show_chart</span>
+                <h2 class="font-headline-sm text-headline-sm text-on-surface">Biến động theo thời gian</h2>
+            </div>
+            <div class="p-space-md">
+                <canvas id="tl" height="180" role="img" aria-label="Biểu đồ biến động theo tháng"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{{ ext_layers|json_script:"ext" }}
+<script src="{% static 'vendor/leaflet/leaflet.js' %}"></script>
+<script src="{% static 'vendor/chartjs/chart.umd.min.js' %}"></script>
+<script>
+(function () {
+    var COLORS = { none: '#9e9e9e', low: '#43a047', medium: '#fdd835', high: '#fb8c00', very_high: '#c62828' };
+    var map = L.map('map').setView([16.0, 106.0], 6);
+
+    var osm = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap' });
+    var carto = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { maxZoom: 20, subdomains: 'abcd', attribution: '&copy; OpenStreetMap, &copy; CARTO' }).addTo(map);
+    var sat = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, attribution: 'Tiles &copy; Esri' });
+
+    var base = { 'Bản đồ đường (CARTO)': carto, 'OpenStreetMap': osm, 'Ảnh vệ tinh (Esri)': sat };
+    var overlays = {};
+    var tileErrors = 0;
+    carto.on('tileerror', function () { if (++tileErrors === 5) { map.removeLayer(carto); osm.addTo(map); } });
+
+    try {
+        JSON.parse(JSON.parse(document.getElementById('ext').textContent)).forEach(function (l) {
+            var layer = l.kind === 'wms'
+                ? L.tileLayer.wms(l.url, { layers: l.layers, format: 'image/png', transparent: true, attribution: l.attribution })
+                : L.tileLayer(l.url, { attribution: l.attribution });
+            (l.base ? base : overlays)[l.name] = layer;
+        });
+    } catch (e) { /* cấu hình lớp ngoài không hợp lệ */ }
+
+    var pts = L.layerGroup().addTo(map), routes = L.layerGroup().addTo(map);
+    overlays['Điểm điều tra'] = pts;
+    overlays['Tuyến điều tra'] = routes;
+    L.control.layers(base, overlays, { position: 'topright' }).addTo(map);
+    L.control.scale({ imperial: false }).addTo(map);
+
+    function esc(s) { var d = document.createElement('div'); d.textContent = s == null ? '' : s; return d.innerHTML; }
+    function qs() { return new URLSearchParams(new FormData(document.getElementById('flt'))).toString(); }
+
+    function load() {
+        var q = qs();
+        var exp = document.getElementById('exp');
+        if (exp) exp.href = '{% url "mapview:export" %}?' + q;
+
+        fetch('{% url "mapview:points" %}?' + q).then(function (r) { return r.json(); }).then(function (g) {
+            pts.clearLayers();
+            var b = [];
+            g.features.forEach(function (f) {
+                var c = f.geometry.coordinates, p = f.properties, ll = [c[1], c[0]];
+                b.push(ll);
+                var m = L.circleMarker(ll, {
+                    radius: 8, color: '#fff', weight: 2,
+                    fillColor: COLORS[p.level] || COLORS.none, fillOpacity: .95
+                }).addTo(pts);
+                m.bindTooltip(esc(p.code + ' - ' + p.name));
+                m.on('click', function () { showPoint(p.id); });
+            });
+            var u = new URLSearchParams(location.search);
+            if (u.get('lat') && u.get('lng')) map.setView([+u.get('lat'), +u.get('lng')], 15);
+            else if (b.length) map.fitBounds(b, { padding: [30, 30], maxZoom: 14 });
+        });
+
+        fetch('{% url "mapview:routes" %}').then(function (r) { return r.json(); }).then(function (g) {
+            routes.clearLayers();
+            L.geoJSON(g, {
+                style: { color: '#1565c0', weight: 3, dashArray: '6 4' },
+                onEachFeature: function (f, l) { l.bindTooltip(esc(f.properties.name)); }
+            }).addTo(routes);
+        });
+
+        fetch('{% url "mapview:timeline" %}?' + q).then(function (r) { return r.json(); }).then(function (j) {
+            if (window.tlChart) window.tlChart.destroy();
+            window.tlChart = new Chart(document.getElementById('tl'), {
+                type: 'bar',
+                data: {
+                    labels: j.series.map(function (s) { return s.period; }),
+                    datasets: [
+                        { label: 'Tỷ lệ hại TB (%)', data: j.series.map(function (s) { return s.rate; }), backgroundColor: '#c62828' },
+                        { label: 'DT hại (ha)', data: j.series.map(function (s) { return s.affected; }), backgroundColor: '#15803d' }
+                    ]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { labels: { font: { family: 'Inter', size: 11 }, boxWidth: 10 } } },
+                    scales: { x: { ticks: { font: { family: 'Inter', size: 10 } } }, y: { ticks: { font: { family: 'Inter', size: 10 } } } }
+                }
+            });
+        });
+    }
+
+    function showPoint(id) {
+        fetch('{% url "mapview:point_detail" 0 %}'.replace('/0/', '/' + id + '/'))
+            .then(function (r) { return r.json(); })
+            .then(function (j) {
+                var h = '<div class="flex flex-col gap-1"><strong class="font-title-md text-title-md text-on-surface">' + esc(j.point.code + ' - ' + j.point.name) + '</strong>'
+                      + '<span class="font-label-sm text-label-sm text-outline">' + esc(j.point.division) + '</span></div><hr class="my-2 border-outline-variant/40">';
+                if (!j.history.length) {
+                    h += '<p class="font-body-sm text-on-surface-variant">Chưa có phiếu đã xác nhận.</p>';
+                }
+                j.history.forEach(function (r) {
+                    h += '<div class="py-2 border-b border-outline-variant/20 last:border-0">'
+                       + '<a href="/surveys/records/' + r.id + '/" class="font-title-md text-title-md text-primary hover:underline">' + esc(r.date) + ' · ' + esc(r.pest) + '</a>'
+                       + '<div class="font-data-tabular text-data-tabular text-on-surface-variant mt-0.5">Tỷ lệ hại: ' + esc(r.rate) + '% · Mật độ: ' + esc(r.density) + '</div>'
+                       + '<p class="font-body-sm text-body-sm text-on-surface mt-0.5">' + esc(r.comment) + '</p>';
+                    (r.images || []).forEach(function (u) {
+                        h += '<img src="' + esc(u) + '" class="mt-1 rounded-lg max-w-full" alt="Ảnh hiện trường" loading="lazy">';
+                    });
+                    h += '</div>';
+                });
+                document.getElementById('detail').innerHTML = h;
+            });
+    }
+
+    document.getElementById('flt').addEventListener('submit', function (e) { e.preventDefault(); load(); });
+    var reset = document.getElementById('btn-reset');
+    if (reset) reset.addEventListener('click', function () { document.getElementById('flt').reset(); load(); });
+    var impBtn = document.getElementById('btn-import');
+    if (impBtn) impBtn.addEventListener('click', function () { document.getElementById('imp').classList.toggle('hidden'); });
+
+    load();
+})();
+</script>
+{% endblock %}

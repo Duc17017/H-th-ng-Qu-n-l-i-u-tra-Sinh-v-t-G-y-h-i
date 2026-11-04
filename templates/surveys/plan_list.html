@@ -1,0 +1,106 @@
+﻿{% extends "base_ui.html" %}
+{% load ui %}
+{% block title %}Kế hoạch điều tra{% endblock %}
+
+{% block page_header %}
+<div class="pt-space-md pb-space-md flex flex-wrap items-end justify-between gap-space-md">
+  <div class="min-w-0">
+    <nav class="flex flex-wrap items-center gap-1 text-on-surface-variant font-label-md mb-space-xs">
+      <a href="{{ home_url }}" class="hover:text-primary">Tổng quan</a>
+      <span class="msym text-[14px] text-outline">chevron_right</span>
+      <span class="text-primary font-semibold">Kế hoạch điều tra</span>
+    </nav>
+    <h1 class="font-display-sm text-display-sm text-on-surface tracking-tight">Kế hoạch điều tra</h1>
+  </div>
+  {% if can_create %}
+  <a class="h-10 px-space-lg rounded-xl bg-primary hover:bg-primary-container text-white font-label-lg inline-flex items-center gap-2 shadow-sm" href="{% url 'surveys:plan_create' %}">
+    <span class="msym text-[20px]">add</span>Lập kế hoạch
+  </a>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="bg-white rounded-xl shadow-sm overflow-hidden">
+  <form class="p-space-md bg-surface-container-low border-b border-outline-variant/30 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-space-sm" method="get">
+    <div class="flex flex-col gap-1">
+      <label class="tw-label" for="q">Tìm kiếm</label>
+      <input class="tw-input" id="q" type="search" name="q" value="{{ q }}" placeholder="Mã, tên kế hoạch...">
+    </div>
+    <div class="flex flex-col gap-1">
+      <label class="tw-label" for="status">Trạng thái</label>
+      <select class="tw-input" id="status" name="status">
+        <option value="">Tất cả</option>
+        {% for k, v in statuses %}<option value="{{ k }}" {% if request.GET.status == k %}selected{% endif %}>{{ v }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="flex flex-col gap-1">
+      <label class="tw-label" for="plan_type">Loại</label>
+      <select class="tw-input" id="plan_type" name="plan_type">
+        <option value="">Tất cả</option>
+        {% for k, v in types %}<option value="{{ k }}" {% if request.GET.plan_type == k %}selected{% endif %}>{{ v }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="flex flex-col gap-1">
+      <label class="tw-label" for="crop">Cây trồng</label>
+      <select class="tw-input" id="crop" name="crop">
+        <option value="">Tất cả</option>
+        {% for c in crops %}<option value="{{ c.pk }}" {% if request.GET.crop == c.pk|stringformat:"s" %}selected{% endif %}>{{ c.name }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="flex items-end">
+      <button class="h-10 flex-1 rounded-xl bg-primary text-white font-label-lg inline-flex items-center justify-center gap-1.5" type="submit">
+        <span class="msym text-[18px]">filter_alt</span>Lọc
+      </button>
+    </div>
+  </form>
+
+  <div class="overflow-x-auto">
+    <table class="w-full text-left border-collapse">
+      <thead>
+        <tr class="bg-surface-container text-on-surface-variant font-label-sm text-label-sm uppercase tracking-wider">
+          <th class="py-space-sm px-space-md">Mã</th>
+          <th class="py-space-sm px-space-md">Kế hoạch</th>
+          <th class="py-space-sm px-space-md">Loại</th>
+          <th class="py-space-sm px-space-md">Cây trồng</th>
+          <th class="py-space-sm px-space-md">Địa bàn</th>
+          <th class="py-space-sm px-space-md">Thời gian</th>
+          <th class="py-space-sm px-space-md w-32">Tiến độ</th>
+          <th class="py-space-sm px-space-md">Trạng thái</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-outline-variant/30 font-body-sm text-body-sm">
+        {% for p in page %}
+        {% with pr=p.progress %}
+        <tr class="hover:bg-surface-container-low transition-colors">
+          <td class="py-space-sm px-space-md">
+            <a href="{% url 'surveys:plan_detail' p.pk %}" class="font-data-tabular text-data-tabular text-primary font-semibold hover:underline">{{ p.code }}</a>
+          </td>
+          <td class="py-space-sm px-space-md">
+            <a href="{% url 'surveys:plan_detail' p.pk %}" class="font-title-md text-title-md text-on-surface hover:text-primary">{{ p.name }}</a>
+          </td>
+          <td class="py-space-sm px-space-md text-on-surface-variant">{{ p.get_plan_type_display }}</td>
+          <td class="py-space-sm px-space-md">{{ p.crop }}</td>
+          <td class="py-space-sm px-space-md text-on-surface-variant">{{ p.division }}</td>
+          <td class="py-space-sm px-space-md whitespace-nowrap font-data-tabular text-data-tabular">{{ p.start_date|vn_date }} – {{ p.end_date|vn_date }}</td>
+          <td class="py-space-sm px-space-md">
+            <div class="flex items-center gap-space-xs">
+              <div class="flex-1 bg-surface-container rounded-full h-1.5 overflow-hidden min-w-16"
+                   role="progressbar" aria-valuenow="{{ pr.2 }}" aria-valuemin="0" aria-valuemax="100" aria-label="Tiến độ">
+                <div class="bg-primary h-full rounded-full" style="width: {{ pr.2 }}%"></div>
+              </div>
+              <span class="font-label-sm text-label-sm text-on-surface-variant whitespace-nowrap">{{ pr.0 }}/{{ pr.1 }}</span>
+            </div>
+          </td>
+          <td class="py-space-sm px-space-md">{{ p|state_badge }}</td>
+        </tr>
+        {% endwith %}
+        {% empty %}
+        <tr><td colspan="8" class="py-space-3xl text-center text-on-surface-variant">Chưa có kế hoạch.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% include "partials/pagination.html" %}
+{% endblock %}

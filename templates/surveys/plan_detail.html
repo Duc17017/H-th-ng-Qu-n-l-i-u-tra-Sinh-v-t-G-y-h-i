@@ -1,0 +1,266 @@
+{% extends "base_ui.html" %}
+{% load ui %}
+{% block title %}{{ plan.name }}{% endblock %}
+
+{% block page_header %}
+<div class="pt-space-md pb-space-md flex flex-wrap items-end justify-between gap-space-md">
+  <div class="min-w-0">
+    <nav class="flex flex-wrap items-center gap-1 text-on-surface-variant font-label-md mb-space-xs">
+      <a href="{% url 'surveys:plan_list' %}" class="hover:text-primary">Kế hoạch điều tra</a>
+      <span class="msym text-[14px] text-outline">chevron_right</span>
+      <span class="text-primary font-semibold">{{ plan.code }}</span>
+    </nav>
+    <div class="flex flex-wrap items-center gap-space-sm">
+      <h1 class="font-display-sm text-display-sm text-on-surface tracking-tight">{{ plan.code }}</h1>
+      {{ plan|state_badge }}
+    </div>
+    <p class="font-body-md text-body-md text-on-surface-variant mt-space-2xs">{{ plan.name }}</p>
+  </div>
+  <div class="flex flex-wrap items-center gap-space-sm">
+    <a class="h-10 px-space-md rounded-xl bg-surface-container hover:bg-surface-container-high text-on-surface font-label-lg inline-flex items-center gap-1.5" href="{% url 'surveys:plan_list' %}">
+      <span class="msym text-[18px]">arrow_back</span>Danh sách
+    </a>
+    {% if can_edit %}
+    <a class="h-10 px-space-md rounded-xl bg-primary hover:bg-primary-container text-white font-label-lg inline-flex items-center gap-1.5" href="{% url 'surveys:plan_edit' plan.pk %}">
+      <span class="msym text-[18px]">edit</span>Sửa
+    </a>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-space-lg">
+  <div class="lg:col-span-8 flex flex-col gap-space-lg">
+    <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+      <div class="px-space-lg py-space-sm bg-surface-container-low flex items-center gap-2">
+        <span class="msym text-[18px] text-primary">event_note</span>
+        <h2 class="font-headline-sm text-headline-sm text-on-surface">Thông tin kế hoạch</h2>
+      </div>
+      <dl class="divide-y divide-outline-variant/20">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-space-xs px-space-lg py-space-sm">
+          <dt class="font-label-md text-on-surface-variant">Loại điều tra</dt>
+          <dd class="font-body-sm text-on-surface sm:col-span-2">{{ plan.get_plan_type_display }}</dd>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-space-xs px-space-lg py-space-sm">
+          <dt class="font-label-md text-on-surface-variant">Cây trồng</dt>
+          <dd class="font-body-sm text-on-surface sm:col-span-2">{{ plan.crop }}{% if plan.season %} · {{ plan.season }}{% endif %}</dd>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-space-xs px-space-lg py-space-sm">
+          <dt class="font-label-md text-on-surface-variant">Đối tượng gây hại</dt>
+          <dd class="sm:col-span-2 flex flex-wrap gap-1">
+            {% for p in plan.pests.all %}
+            <span class="px-2 py-0.5 rounded-full bg-surface-container text-on-surface font-label-sm">{{ p }}</span>
+            {% empty %}<span class="font-body-sm text-on-surface-variant">—</span>{% endfor %}
+          </dd>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-space-xs px-space-lg py-space-sm">
+          <dt class="font-label-md text-on-surface-variant">Phương pháp</dt>
+          <dd class="font-body-sm text-on-surface sm:col-span-2">{{ plan.method|default:"—" }}</dd>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-space-xs px-space-lg py-space-sm">
+          <dt class="font-label-md text-on-surface-variant">Biểu mẫu</dt>
+          <dd class="font-body-sm text-on-surface sm:col-span-2">{{ plan.form_template|default:"Biểu mẫu mặc định" }}</dd>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-space-xs px-space-lg py-space-sm">
+          <dt class="font-label-md text-on-surface-variant">Địa bàn</dt>
+          <dd class="font-body-sm text-on-surface sm:col-span-2">{{ plan.division.full_name }}</dd>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-space-xs px-space-lg py-space-sm">
+          <dt class="font-label-md text-on-surface-variant">Thời gian</dt>
+          <dd class="font-body-sm text-on-surface sm:col-span-2 font-data-tabular">
+            {{ plan.start_date|vn_date }} – {{ plan.end_date|vn_date }}
+            {% if plan.frequency_days %}<span class="text-on-surface-variant">· lặp {{ plan.frequency_days }} ngày/lần</span>{% endif %}
+          </dd>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-space-xs px-space-lg py-space-sm">
+          <dt class="font-label-md text-on-surface-variant">Người lập</dt>
+          <dd class="font-body-sm text-on-surface sm:col-span-2">{{ plan.created_by|default:"—" }}</dd>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-space-xs px-space-lg py-space-sm">
+          <dt class="font-label-md text-on-surface-variant">Nội dung</dt>
+          <dd class="font-body-sm text-on-surface sm:col-span-2">{{ plan.description|default:"—"|linebreaksbr }}</dd>
+        </div>
+      </dl>
+    </div>
+
+    <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+      <div class="px-space-lg py-space-sm bg-surface-container-low flex items-center justify-between gap-space-sm">
+        <div class="flex items-center gap-2">
+          <span class="msym text-[18px] text-primary">route</span>
+          <h2 class="font-headline-sm text-headline-sm text-on-surface">Tuyến điều tra</h2>
+        </div>
+        {% if can_edit %}
+        <a class="font-label-md text-primary hover:underline" href="{% url 'surveys:routes_create' %}">+ Thêm tuyến</a>
+        {% endif %}
+      </div>
+      <ul class="divide-y divide-outline-variant/20">
+        {% for r in routes %}
+        <li class="px-space-lg py-space-sm flex items-center justify-between gap-space-sm">
+          <a href="{% url 'surveys:routes_detail' r.pk %}" class="font-body-sm text-on-surface hover:text-primary">{{ r }}</a>
+          <span class="font-label-sm text-label-sm text-on-surface-variant">{{ r.unit|default:"" }}</span>
+        </li>
+        {% empty %}
+        <li class="px-space-lg py-space-md text-center font-body-sm text-on-surface-variant">Chưa có tuyến.</li>
+        {% endfor %}
+      </ul>
+    </div>
+
+    <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+      <div class="px-space-lg py-space-sm bg-surface-container-low flex items-center justify-between gap-space-sm">
+        <div class="flex items-center gap-2">
+          <span class="msym text-[18px] text-primary">checklist</span>
+          <h2 class="font-headline-sm text-headline-sm text-on-surface">Nhiệm vụ điều tra</h2>
+        </div>
+        <span class="font-label-sm text-label-sm text-on-surface-variant">{{ done }}/{{ total }} hoàn thành</span>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse">
+          <thead>
+            <tr class="bg-surface-container text-on-surface-variant font-label-sm text-label-sm uppercase">
+              <th class="py-space-sm px-space-md">Điểm</th>
+              <th class="py-space-sm px-space-md">Ngày</th>
+              <th class="py-space-sm px-space-md">Hạn</th>
+              <th class="py-space-sm px-space-md">Phụ trách</th>
+              <th class="py-space-sm px-space-md">Trạng thái</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-outline-variant/30 font-body-sm">
+            {% for t in tasks %}
+            <tr class="hover:bg-surface-container-low {% if t.overdue %}bg-error-container/20{% endif %}">
+              <td class="py-space-sm px-space-md"><a href="{% url 'surveys:tasks_detail' t.pk %}" class="text-on-surface hover:text-primary">{{ t.point }}</a></td>
+              <td class="py-space-sm px-space-md whitespace-nowrap">{{ t.survey_date|vn_date }}</td>
+              <td class="py-space-sm px-space-md whitespace-nowrap {% if t.overdue %}text-tertiary font-semibold{% endif %}">{{ t.due_date|vn_date }}</td>
+              <td class="py-space-sm px-space-md text-on-surface-variant">{{ t.assignee|default:"—" }}</td>
+              <td class="py-space-sm px-space-md">{{ t|state_badge }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="5" class="py-space-xl text-center text-on-surface-variant">Chưa có nhiệm vụ.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT -->
+  <div class="lg:col-span-4 flex flex-col gap-space-lg">
+    <div class="bg-white rounded-xl shadow-sm p-space-lg flex flex-col gap-space-sm">
+      <div class="flex items-center justify-between">
+        <span class="font-label-md text-label-md text-on-surface-variant">Tiến độ kế hoạch</span>
+        <span class="msym text-[20px] text-primary">donut_large</span>
+      </div>
+      <div class="font-display-lg text-display-lg text-primary leading-none">{{ pct }}%</div>
+      <div class="w-full bg-surface-container rounded-full h-2 overflow-hidden"
+           role="progressbar" aria-label="Tiến độ kế hoạch" aria-valuenow="{{ pct }}" aria-valuemin="0" aria-valuemax="100">
+        <div class="bg-primary h-full rounded-full" style="width: {{ pct }}%"></div>
+      </div>
+      <span class="font-label-sm text-label-sm text-on-surface-variant">{{ done }}/{{ total }} nhiệm vụ hoàn thành</span>
+    </div>
+
+    {% if can_approve %}
+    <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+      <div class="px-space-lg py-space-sm bg-surface-container-low flex items-center gap-2">
+        <span class="msym text-[18px] text-primary">approval</span>
+        <h2 class="font-headline-sm text-headline-sm text-on-surface">Quy trình kế hoạch</h2>
+      </div>
+      <div class="p-space-lg flex flex-col gap-space-sm">
+        {% if plan.status == 'draft' %}
+        <form method="post" action="{% url 'surveys:plan_action' plan.pk 'approve' %}">{% csrf_token %}
+          <button class="w-full h-10 rounded-xl bg-primary hover:bg-primary-container text-white font-label-lg inline-flex items-center justify-center gap-2">
+            <span class="msym text-[18px]">verified</span>Phê duyệt kế hoạch
+          </button>
+        </form>
+        {% endif %}
+        {% if plan.status == 'approved' %}
+        <form method="post" action="{% url 'surveys:plan_action' plan.pk 'start' %}">{% csrf_token %}
+          <button class="w-full h-10 rounded-xl bg-primary-container hover:bg-primary text-white font-label-lg inline-flex items-center justify-center gap-2">
+            <span class="msym text-[18px]">play_arrow</span>Bắt đầu thực hiện
+          </button>
+        </form>
+        {% endif %}
+        {% if plan.status == 'running' or plan.status == 'approved' %}
+        <form method="post" action="{% url 'surveys:plan_action' plan.pk 'finish' %}">{% csrf_token %}
+          <button class="w-full h-10 rounded-xl bg-primary-fixed text-on-primary-fixed font-label-lg inline-flex items-center justify-center gap-2">
+            <span class="msym text-[18px]">task_alt</span>Hoàn thành kế hoạch
+          </button>
+        </form>
+        {% endif %}
+        {% if plan.status == 'draft' or plan.status == 'approved' or plan.status == 'running' %}
+        <form method="post" action="{% url 'surveys:plan_action' plan.pk 'cancel' %}" onsubmit="return confirm('Hủy kế hoạch này?')">{% csrf_token %}
+          <button class="w-full h-10 rounded-xl bg-error-container text-on-error-container hover:bg-tertiary-container hover:text-white font-label-lg inline-flex items-center justify-center gap-2">
+            <span class="msym text-[18px]">cancel</span>Hủy kế hoạch
+          </button>
+        </form>
+        {% endif %}
+        {% if plan.status == 'done' or plan.status == 'cancelled' %}
+        <form method="post" action="{% url 'surveys:plan_action' plan.pk 'reopen' %}">{% csrf_token %}
+          <button class="w-full h-10 rounded-xl bg-surface-container text-on-surface hover:bg-surface-container-high font-label-lg inline-flex items-center justify-center gap-2">
+            <span class="msym text-[18px]">lock_open</span>Mở lại (dự thảo)
+          </button>
+        </form>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+
+    {% if can_edit %}
+    <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+      <div class="px-space-lg py-space-sm bg-surface-container-low flex items-center gap-2">
+        <span class="msym text-[18px] text-primary">auto_mode</span>
+        <h2 class="font-headline-sm text-headline-sm text-on-surface">Sinh nhiệm vụ theo lịch</h2>
+      </div>
+      <div class="p-space-lg flex flex-col gap-space-sm">
+        <p class="font-body-sm text-body-sm text-on-surface-variant">
+          Tạo nhiệm vụ cho mọi điểm thuộc các tuyến của kế hoạch, theo chu kỳ lặp. Nhiệm vụ đã có sẽ được giữ nguyên.
+        </p>
+        <form method="post" action="{% url 'surveys:plan_generate' plan.pk %}" class="flex flex-col gap-space-sm">
+          {% csrf_token %}
+          {% for field in gen_form %}
+          <div class="flex flex-col gap-1">
+            <label class="tw-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+            {{ field|field_widget }}
+          </div>
+          {% endfor %}
+          <button class="h-10 rounded-xl bg-primary hover:bg-primary-container text-white font-label-lg inline-flex items-center justify-center gap-2" type="submit">
+            <span class="msym text-[18px]">bolt</span>Sinh nhiệm vụ
+          </button>
+        </form>
+      </div>
+    </div>
+    {% endif %}
+
+    <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+      <div class="px-space-lg py-space-sm bg-surface-container-low flex items-center gap-2">
+        <span class="msym text-[18px] text-primary">history</span>
+        <h2 class="font-headline-sm text-headline-sm text-on-surface">Lịch sử kế hoạch</h2>
+      </div>
+      <ul class="divide-y divide-outline-variant/20 max-h-80 overflow-y-auto">
+        {% for h in history %}
+        <li class="px-space-lg py-space-sm flex items-start gap-space-sm">
+          <div class="w-6 h-6 rounded-full {{ h.action|audit_icon:'class' }} flex items-center justify-center shrink-0 mt-0.5">
+            <span class="msym text-[14px]">{{ h.action|audit_icon:"icon" }}</span>
+          </div>
+          <div class="min-w-0 flex-1">
+            <p class="font-body-sm text-body-sm text-on-surface"><strong>{{ h.action }}</strong> · {{ h.username|default:"hệ thống" }}</p>
+            <p class="font-label-sm text-label-sm text-outline">{{ h.created_at|vn_date }}</p>
+            {% if h.changes %}
+            <ul class="mt-1 flex flex-col gap-0.5">
+              {% for k, v in h.changes.items %}
+              <li class="font-label-sm text-label-sm text-on-surface-variant">
+                <span class="text-outline">{{ k }}:</span>
+                <span class="line-through mr-1">{{ v.0|default:"∅" }}</span>→ <span class="text-primary font-semibold">{{ v.1|default:"∅" }}</span>
+              </li>
+              {% endfor %}
+            </ul>
+            {% endif %}
+          </div>
+        </li>
+        {% empty %}
+        <li class="px-space-lg py-space-md text-center font-body-sm text-on-surface-variant">Chưa có.</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,126 @@
+{% extends "base_ui.html" %}
+{% load ui %}
+{% block title %}{{ post.title }}{% endblock %}
+
+{% block page_header %}
+<div class="pt-space-md pb-space-md flex flex-wrap items-end justify-between gap-space-md">
+  <div class="min-w-0">
+    <nav class="flex flex-wrap items-center gap-1 text-on-surface-variant font-label-md mb-space-xs">
+      <a href="{% url 'cms:manage_list' %}" class="hover:text-primary">Quản lý nội dung</a>
+      <span class="msym text-[14px] text-outline">chevron_right</span>
+      <span class="text-primary font-semibold truncate">{{ post.title }}</span>
+    </nav>
+    <div class="flex flex-wrap items-center gap-space-sm">
+      <h1 class="font-display-sm text-display-sm text-on-surface tracking-tight">{{ post.title }}</h1>
+      {{ post|state_badge }}
+      {% if post.version > 1 %}<span class="px-2 py-0.5 rounded-full bg-surface-container text-on-surface-variant font-label-sm">v{{ post.version }}</span>{% endif %}
+    </div>
+  </div>
+  <div class="flex flex-wrap items-center gap-space-sm">
+    <a class="h-10 px-space-md rounded-xl bg-surface-container hover:bg-surface-container-high text-on-surface font-label-lg inline-flex items-center gap-1.5" href="{% url 'cms:manage_list' %}">
+      <span class="msym text-[18px]">arrow_back</span>Danh sách
+    </a>
+    <a class="h-10 px-space-md rounded-xl bg-surface-container hover:bg-surface-container-high text-on-surface font-label-lg inline-flex items-center gap-1.5" href="{% url 'cms:post_public' post.slug %}">
+      <span class="msym text-[18px]">visibility</span>Xem trước
+    </a>
+    {% if can_edit %}
+    <a class="h-10 px-space-md rounded-xl bg-primary hover:bg-primary-container text-white font-label-lg inline-flex items-center gap-1.5" href="{% url 'cms:manage_edit' post.pk %}">
+      <span class="msym text-[18px]">edit</span>Sửa
+    </a>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-space-lg">
+  <div class="lg:col-span-8 bg-white rounded-xl shadow-sm overflow-hidden">
+    <div class="px-space-lg py-space-sm bg-surface-container-low flex flex-wrap items-center gap-space-sm font-label-md text-label-md text-on-surface-variant">
+      <span class="px-2 py-0.5 rounded-full bg-primary-fixed text-on-primary-fixed font-label-sm">{{ post.get_post_type_display }}</span>
+      <span>{{ post.category|default:"Chưa phân mục" }}</span>
+      <span class="text-outline">·</span>
+      <span>Lần cập nhật {{ post.version }}</span>
+      {% if post.published_at %}<span class="text-outline">·</span><span>{{ post.published_at|vn_date }}</span>{% endif %}
+    </div>
+    <div class="p-space-xl">
+      {% if post.review_note %}
+      <div class="flex items-start gap-space-sm px-space-md py-space-sm rounded-xl bg-surface-container text-on-surface font-body-sm mb-space-lg">
+        <span class="msym text-[18px] text-primary shrink-0">comment</span>
+        <div><strong>Ý kiến kiểm duyệt:</strong> {{ post.review_note }}</div>
+      </div>
+      {% endif %}
+      {% if post.summary %}
+      <p class="font-body-lg text-body-lg text-on-surface font-medium pb-space-md mb-space-md border-b border-outline-variant/30">{{ post.summary }}</p>
+      {% endif %}
+      <div class="font-body-md text-body-md text-on-surface whitespace-pre-line leading-relaxed">{{ post.content }}</div>
+    </div>
+  </div>
+
+  <div class="lg:col-span-4 flex flex-col gap-space-lg">
+    <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+      <div class="px-space-lg py-space-sm bg-surface-container-low flex items-center gap-2">
+        <span class="msym text-[18px] text-primary">approval</span>
+        <h2 class="font-headline-sm text-headline-sm text-on-surface">Quy trình biên tập</h2>
+      </div>
+      <form method="post" class="p-space-lg flex flex-col gap-space-sm">
+        {% csrf_token %}
+        {% if can_review or can_publish or can_unpublish %}
+        <div class="flex flex-col gap-1">
+          <label class="tw-label" for="note">Ý kiến / lý do</label>
+          <textarea class="tw-input" id="note" name="note" rows="2"></textarea>
+        </div>
+        {% endif %}
+        {% if can_submit %}
+        <button class="h-10 rounded-xl bg-primary hover:bg-primary-container text-white font-label-lg inline-flex items-center justify-center gap-2" formaction="{% url 'cms:manage_action' post.pk 'submit' %}">
+          <span class="msym text-[18px]">send</span>Gửi kiểm duyệt
+        </button>
+        {% endif %}
+        {% if can_review %}
+        <button class="h-10 rounded-xl bg-primary-container hover:bg-primary text-white font-label-lg inline-flex items-center justify-center gap-2" formaction="{% url 'cms:manage_action' post.pk 'approve' %}">
+          <span class="msym text-[18px]">verified</span>Duyệt nội dung
+        </button>
+        <button class="h-10 rounded-xl bg-error-container text-on-error-container hover:bg-tertiary-container hover:text-white font-label-lg inline-flex items-center justify-center gap-2" formaction="{% url 'cms:manage_action' post.pk 'return' %}">
+          <span class="msym text-[18px]">undo</span>Trả lại biên tập
+        </button>
+        {% endif %}
+        {% if can_publish %}
+        <button class="h-10 rounded-xl bg-primary-container hover:bg-primary text-white font-label-lg inline-flex items-center justify-center gap-2" formaction="{% url 'cms:manage_action' post.pk 'publish' %}">
+          <span class="msym text-[18px]">publish</span>Đăng tải
+        </button>
+        {% endif %}
+        {% if can_unpublish %}
+        <button class="h-10 rounded-xl bg-secondary-fixed text-on-secondary-fixed font-label-lg inline-flex items-center justify-center gap-2" formaction="{% url 'cms:manage_action' post.pk 'unpublish' %}">
+          <span class="msym text-[18px]">unpublished</span>Gỡ bài
+        </button>
+        {% endif %}
+        {% if can_revise %}
+        <button class="h-10 rounded-xl bg-surface-container hover:bg-surface-container-high text-on-surface font-label-lg inline-flex items-center justify-center gap-2" formaction="{% url 'cms:manage_action' post.pk 'revise' %}">
+          <span class="msym text-[18px]">edit_document</span>Điều chỉnh (bản mới)
+        </button>
+        {% endif %}
+        {% if not can_submit and not can_review and not can_publish and not can_unpublish and not can_revise %}
+        <span class="font-body-sm text-body-sm text-on-surface-variant">Không có thao tác khả dụng ở trạng thái hiện tại.</span>
+        {% endif %}
+      </form>
+    </div>
+
+    <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+      <div class="px-space-lg py-space-sm bg-surface-container-low flex items-center gap-2">
+        <span class="msym text-[18px] text-primary">history</span>
+        <h2 class="font-headline-sm text-headline-sm text-on-surface">Lịch sử phát hành</h2>
+      </div>
+      <ul class="divide-y divide-outline-variant/20 max-h-80 overflow-y-auto">
+        {% for r in revisions %}
+        <li class="px-space-lg py-space-sm">
+          <p class="font-body-sm text-body-sm text-on-surface"><strong>{{ r.action }}</strong> · v{{ r.version }}</p>
+          <p class="font-label-sm text-label-sm text-outline">{{ r.user|default:"—" }} · {{ r.created_at|vn_date }}</p>
+          {% if r.note %}<p class="font-label-sm text-label-sm text-on-surface-variant mt-0.5">{{ r.note }}</p>{% endif %}
+        </li>
+        {% empty %}
+        <li class="px-space-lg py-space-md text-center font-body-sm text-on-surface-variant">Chưa có.</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+</div>
+{% endblock %}

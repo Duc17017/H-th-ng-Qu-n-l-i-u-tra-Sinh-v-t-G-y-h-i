@@ -1,0 +1,242 @@
+{% extends "base_ui.html" %}
+{% load ui %}
+{% block title %}{{ a.code }}{% endblock %}
+
+{% block page_header %}
+<div class="pt-space-md pb-space-md flex flex-wrap items-end justify-between gap-space-md">
+  <div class="min-w-0">
+    <nav class="flex flex-wrap items-center gap-1 text-on-surface-variant font-label-md mb-space-xs">
+      <a href="{% url 'alerts:alert_list' %}" class="hover:text-primary">Cảnh báo</a>
+      <span class="msym text-[14px] text-outline">chevron_right</span>
+      <span class="text-primary font-semibold">{{ a.code }}</span>
+    </nav>
+    <div class="flex flex-wrap items-center gap-space-sm">
+      <h1 class="font-display-sm text-display-sm text-on-surface tracking-tight">{{ a.code }}</h1>
+      {{ a|state_badge }}
+      {{ a|risk_badge }}
+      {% if a.version > 1 %}<span class="px-2 py-0.5 rounded-full bg-surface-container text-on-surface-variant font-label-sm">Lần ban hành {{ a.version }}</span>{% endif %}
+    </div>
+    <p class="font-body-md text-body-md text-on-surface-variant mt-space-2xs">{{ a.title }}</p>
+  </div>
+  <div class="flex flex-wrap items-center gap-space-sm">
+    <a class="h-10 px-space-md rounded-xl bg-surface-container hover:bg-surface-container-high text-on-surface font-label-lg inline-flex items-center gap-1.5" href="{% url 'alerts:alert_list' %}">
+      <span class="msym text-[18px]">arrow_back</span>Danh sách
+    </a>
+    {% if can_edit %}
+    <a class="h-10 px-space-md rounded-xl bg-primary hover:bg-primary-container text-white font-label-lg inline-flex items-center gap-1.5" href="{% url 'alerts:alert_edit' a.pk %}">
+      <span class="msym text-[18px]">edit</span>Sửa bản tin
+    </a>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-space-lg">
+  <div class="lg:col-span-8 flex flex-col gap-space-lg">
+    <!-- Content -->
+    <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+      <div class="px-space-lg py-space-sm bg-surface-container-low flex items-center justify-between gap-space-sm">
+        <div class="flex items-center gap-2">
+          <span class="msym text-[18px] text-primary">campaign</span>
+          <h2 class="font-headline-sm text-headline-sm text-on-surface">Nội dung bản tin</h2>
+        </div>
+        <span class="font-label-sm text-label-sm text-outline">Lần ban hành {{ a.version }}</span>
+      </div>
+      <dl class="divide-y divide-outline-variant/20">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-space-xs px-space-lg py-space-sm">
+          <dt class="font-label-md text-label-md text-on-surface-variant">Sinh vật / cây trồng</dt>
+          <dd class="font-body-sm text-body-sm text-on-surface sm:col-span-2">{{ a.pest }} / {{ a.crop }}</dd>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-space-xs px-space-lg py-space-sm">
+          <dt class="font-label-md text-label-md text-on-surface-variant">Phạm vi địa bàn</dt>
+          <dd class="font-body-sm text-body-sm text-on-surface sm:col-span-2">
+            {% for d in a.divisions.all %}{{ d }}{% if not forloop.last %}, {% endif %}{% empty %}—{% endfor %}
+          </dd>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-space-xs px-space-lg py-space-sm">
+          <dt class="font-label-md text-label-md text-on-surface-variant">Hiệu lực</dt>
+          <dd class="font-body-sm text-body-sm text-on-surface sm:col-span-2 font-data-tabular">{{ a.valid_from|vn_date }} – {{ a.valid_to|vn_date }}</dd>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-space-xs px-space-lg py-space-sm">
+          <dt class="font-label-md text-label-md text-on-surface-variant">Căn cứ nhận định</dt>
+          <dd class="font-body-sm text-body-sm text-on-surface sm:col-span-2">{{ a.basis|linebreaksbr }}</dd>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-space-xs px-space-lg py-space-sm bg-primary-fixed/20">
+          <dt class="font-label-md text-label-md text-primary sm:col-span-3 flex items-center gap-1">
+            <span class="msym text-[16px]">vaccines</span>Hướng dẫn phòng trừ
+          </dt>
+          <dd class="font-body-sm text-body-sm text-on-surface sm:col-span-3">{{ a.guidance|linebreaksbr }}</dd>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-space-xs px-space-lg py-space-sm">
+          <dt class="font-label-md text-label-md text-on-surface-variant">Nhận định liên kết</dt>
+          <dd class="font-body-sm text-body-sm text-on-surface sm:col-span-2">
+            {% if a.forecast %}<a href="{% url 'forecasts:detail' a.forecast_id %}" class="text-primary hover:underline">{{ a.forecast }}</a>{% else %}—{% endif %}
+          </dd>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-space-xs px-space-lg py-space-sm">
+          <dt class="font-label-md text-label-md text-on-surface-variant">Kênh phát hành</dt>
+          <dd class="sm:col-span-2 flex flex-wrap gap-1">
+            {% for ch in a.channel_names %}
+            <span class="px-2 py-0.5 rounded-full bg-surface-container text-on-surface font-label-sm">{{ ch }}</span>
+            {% empty %}<span class="font-body-sm text-on-surface-variant">—</span>{% endfor %}
+          </dd>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-space-xs px-space-lg py-space-sm">
+          <dt class="font-label-md text-label-md text-on-surface-variant">Đơn vị nhận</dt>
+          <dd class="font-body-sm text-body-sm text-on-surface sm:col-span-2">
+            {% for u in a.recipient_units.all %}{{ u }}{% if not forloop.last %}, {% endif %}{% empty %}—{% endfor %}
+          </dd>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-space-xs px-space-lg py-space-sm">
+          <dt class="font-label-md text-label-md text-on-surface-variant">Soạn / phê duyệt</dt>
+          <dd class="font-body-sm text-body-sm text-on-surface sm:col-span-2">
+            {{ a.created_by|default:"—" }} / {{ a.approved_by|default:"—" }}
+            {% if a.published_at %}<span class="text-on-surface-variant">({{ a.published_at|vn_date }})</span>{% endif %}
+          </dd>
+        </div>
+        {% if a.review_note %}
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-space-xs px-space-lg py-space-sm">
+          <dt class="font-label-md text-label-md text-on-surface-variant">Ý kiến phê duyệt</dt>
+          <dd class="font-body-sm text-body-sm text-on-surface sm:col-span-2">{{ a.review_note }}</dd>
+        </div>
+        {% endif %}
+      </dl>
+    </div>
+
+    <!-- Follow-ups -->
+    <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+      <div class="px-space-lg py-space-sm bg-surface-container-low flex items-center justify-between gap-space-sm">
+        <div class="flex items-center gap-2">
+          <span class="msym text-[18px] text-primary">fact_check</span>
+          <h2 class="font-headline-sm text-headline-sm text-on-surface">Theo dõi sau cảnh báo</h2>
+        </div>
+        {% if can_followup %}
+        <a class="h-8 px-space-sm rounded-lg bg-primary text-white font-label-md inline-flex items-center gap-1" href="{% url 'alerts:followup_create' %}?alert={{ a.pk }}">
+          <span class="msym text-[16px]">add_task</span>Giao nhiệm vụ
+        </a>
+        {% endif %}
+      </div>
+
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-space-sm p-space-lg bg-surface-container-low border-b border-outline-variant/30">
+        <div class="bg-white rounded-lg p-space-sm text-center">
+          <div class="font-headline-lg text-headline-lg text-on-surface">{{ summary.done }}/{{ summary.total }}</div>
+          <div class="font-label-sm text-label-sm text-on-surface-variant uppercase">Hoàn thành</div>
+        </div>
+        <div class="bg-white rounded-lg p-space-sm text-center">
+          <div class="font-headline-lg text-headline-lg {% if summary.overdue %}text-tertiary{% else %}text-on-surface{% endif %}">{{ summary.overdue }}</div>
+          <div class="font-label-sm text-label-sm text-on-surface-variant uppercase">Quá hạn</div>
+        </div>
+        <div class="bg-white rounded-lg p-space-sm text-center">
+          <div class="font-headline-lg text-headline-lg text-on-surface">{{ summary.area|floatformat:1|default:"—" }}</div>
+          <div class="font-label-sm text-label-sm text-on-surface-variant uppercase">Ha đã phòng trừ</div>
+        </div>
+        <div class="bg-white rounded-lg p-space-sm text-center">
+          <div class="font-headline-lg text-headline-lg text-primary">{{ summary.rate_after|floatformat:1|default:"—" }}</div>
+          <div class="font-label-sm text-label-sm text-on-surface-variant uppercase">Tỷ lệ hại sau xử lý (%)</div>
+        </div>
+      </div>
+
+      <div class="px-space-lg py-space-sm flex flex-wrap items-center gap-space-md font-label-md text-label-md text-on-surface-variant border-b border-outline-variant/30">
+        <span class="font-label-sm uppercase text-outline">Hiệu quả:</span>
+        <span class="inline-flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-primary"></span>Tốt {{ summary.eff.good }}</span>
+        <span class="inline-flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-secondary-container"></span>Trung bình {{ summary.eff.fair }}</span>
+        <span class="inline-flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-tertiary"></span>Chưa hiệu quả {{ summary.eff.poor }}</span>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse">
+          <thead>
+            <tr class="bg-surface-container text-on-surface-variant font-label-sm text-label-sm uppercase tracking-wider">
+              <th class="py-space-sm px-space-md">Nhiệm vụ</th>
+              <th class="py-space-sm px-space-md">Phụ trách</th>
+              <th class="py-space-sm px-space-md">Hạn</th>
+              <th class="py-space-sm px-space-md">Trạng thái</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-outline-variant/30 font-body-sm text-body-sm">
+            {% for t in followups %}
+            <tr class="hover:bg-surface-container-low {% if t.overdue %}bg-error-container/20{% endif %}">
+              <td class="py-space-sm px-space-md">
+                <a href="{% url 'alerts:followup_detail' t.pk %}" class="font-title-md text-title-md text-on-surface hover:text-primary">{{ t.title }}</a>
+              </td>
+              <td class="py-space-sm px-space-md text-on-surface-variant">{{ t.assignee|default:t.unit|default:"—" }}</td>
+              <td class="py-space-sm px-space-md whitespace-nowrap {% if t.overdue %}text-tertiary font-semibold{% endif %}">{{ t.due_date|vn_date }}</td>
+              <td class="py-space-sm px-space-md">{{ t|state_badge }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="4" class="py-space-xl text-center text-on-surface-variant">Chưa có nhiệm vụ theo dõi.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT -->
+  <div class="lg:col-span-4 flex flex-col gap-space-lg">
+    {% if can_submit or can_approve or can_update or can_expire or a.status == 'expired' %}
+    <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+      <div class="px-space-lg py-space-sm bg-surface-container-low flex items-center gap-2">
+        <span class="msym text-[18px] text-primary">approval</span>
+        <h2 class="font-headline-sm text-headline-sm text-on-surface">Quy trình phát hành</h2>
+      </div>
+      <form method="post" class="p-space-lg flex flex-col gap-space-sm">
+        {% csrf_token %}
+        <div class="flex flex-col gap-1">
+          <label class="tw-label" for="note">Ý kiến / lý do</label>
+          <textarea class="tw-input" id="note" name="note" rows="2"></textarea>
+        </div>
+        {% if can_submit %}
+        <button class="h-10 rounded-xl bg-primary hover:bg-primary-container text-white font-label-lg inline-flex items-center justify-center gap-2" formaction="{% url 'alerts:alert_action' a.pk 'submit' %}">
+          <span class="msym text-[18px]">send</span>Trình phê duyệt
+        </button>
+        {% endif %}
+        {% if can_approve %}
+        <button class="h-10 rounded-xl bg-primary-container hover:bg-primary text-white font-label-lg inline-flex items-center justify-center gap-2" formaction="{% url 'alerts:alert_action' a.pk 'approve' %}">
+          <span class="msym text-[18px]">verified</span>Phê duyệt &amp; phát hành
+        </button>
+        <button class="h-10 rounded-xl bg-error-container hover:bg-tertiary-container hover:text-white text-on-error-container font-label-lg inline-flex items-center justify-center gap-2" formaction="{% url 'alerts:alert_action' a.pk 'return' %}">
+          <span class="msym text-[18px]">undo</span>Trả lại
+        </button>
+        {% endif %}
+        {% if can_update %}
+        <button class="h-10 rounded-xl bg-surface-container hover:bg-surface-container-high text-on-surface font-label-lg inline-flex items-center justify-center gap-2" formaction="{% url 'alerts:alert_action' a.pk 'update' %}">
+          <span class="msym text-[18px]">edit_document</span>Điều chỉnh bản tin
+        </button>
+        {% endif %}
+        {% if can_expire %}
+        <button class="h-10 rounded-xl bg-secondary-fixed hover:bg-secondary-container hover:text-white text-on-secondary-fixed font-label-lg inline-flex items-center justify-center gap-2"
+                formaction="{% url 'alerts:alert_action' a.pk 'expire' %}" onclick="return confirm('Kết thúc hiệu lực bản tin này?')">
+          <span class="msym text-[18px]">event_busy</span>Kết thúc hiệu lực
+        </button>
+        {% endif %}
+        {% if a.status == 'expired' %}
+        <button class="h-10 rounded-xl bg-surface-container hover:bg-surface-container-high text-on-surface font-label-lg inline-flex items-center justify-center gap-2" formaction="{% url 'alerts:alert_action' a.pk 'reopen' %}">
+          <span class="msym text-[18px]">lock_open</span>Mở lại thành dự thảo
+        </button>
+        {% endif %}
+      </form>
+    </div>
+    {% endif %}
+
+    <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+      <div class="px-space-lg py-space-sm bg-surface-container-low flex items-center gap-2">
+        <span class="msym text-[18px] text-primary">history</span>
+        <h2 class="font-headline-sm text-headline-sm text-on-surface">Lịch sử phát hành</h2>
+      </div>
+      <ul class="divide-y divide-outline-variant/20 max-h-96 overflow-y-auto">
+        {% for r in revisions %}
+        <li class="px-space-lg py-space-sm">
+          <p class="font-body-sm text-body-sm text-on-surface"><strong>{{ r.action }}</strong> · lần {{ r.version }}</p>
+          <p class="font-label-sm text-label-sm text-outline">{{ r.user|default:"hệ thống" }} · {{ r.created_at|vn_date }}</p>
+          {% if r.note %}<p class="font-label-sm text-label-sm text-on-surface-variant mt-0.5">{{ r.note }}</p>{% endif %}
+        </li>
+        {% empty %}
+        <li class="px-space-lg py-space-md text-center font-body-sm text-on-surface-variant">Chưa có.</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+</div>
+{% endblock %}

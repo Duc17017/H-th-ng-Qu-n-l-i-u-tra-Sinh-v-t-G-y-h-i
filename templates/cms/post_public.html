@@ -1,0 +1,76 @@
+{% extends "base_public.html" %}
+{% load ui %}
+{% block title %}{{ post.title }}{% endblock %}
+
+{% block content %}
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-space-xl">
+    <article class="lg:col-span-8">
+        {% if not post.is_public %}
+        <div class="flex items-start gap-space-sm px-space-md py-space-sm rounded-xl bg-secondary-fixed text-on-secondary-fixed font-body-sm mb-space-md">
+            <span class="msym text-[18px]">visibility</span>
+            <span>Bản xem trước: bài viết chưa được đăng công khai ({{ post.get_status_display }}).</span>
+        </div>
+        {% endif %}
+
+        <nav class="flex flex-wrap items-center gap-1 text-on-surface-variant font-label-md mb-space-sm">
+            <a href="{% url 'cms:home' %}" class="hover:text-primary">Trang chủ</a>
+            <span class="msym text-[14px] text-outline">chevron_right</span>
+            <a href="{% url 'cms:post_list' %}?type={{ post.post_type }}" class="hover:text-primary">{{ post.get_post_type_display }}</a>
+        </nav>
+
+        <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+            {% if post.cover %}
+            <img src="{{ post.cover.url }}" alt="{{ post.title }}" class="w-full max-h-80 object-cover">
+            {% endif %}
+            <div class="p-space-2xl">
+                <span class="inline-flex px-2.5 py-1 rounded-full bg-primary-fixed text-on-primary-fixed font-label-sm uppercase tracking-wide">{{ post.get_post_type_display }}</span>
+                <h1 class="font-display-sm text-display-sm text-on-surface tracking-tight mt-space-sm">{{ post.title }}</h1>
+                <p class="font-label-md text-label-md text-on-surface-variant mt-space-xs flex flex-wrap items-center gap-1.5">
+                    <span class="msym text-[15px]">schedule</span>{{ post.published_at|vn_date }}
+                    <span class="text-outline">·</span>
+                    <span class="msym text-[15px]">person</span>{{ post.author|default:"Ban biên tập" }}
+                    {% if post.version > 1 %}
+                    <span class="text-outline">·</span><span>Cập nhật lần {{ post.version }}</span>
+                    {% endif %}
+                    <span class="text-outline">·</span>
+                    <span class="msym text-[15px]">visibility</span>{{ post.views }} lượt xem
+                </p>
+
+                {% if post.summary %}
+                <p class="font-body-lg text-body-lg text-on-surface mt-space-lg pb-space-md border-b border-outline-variant/30 font-medium">{{ post.summary }}</p>
+                {% endif %}
+
+                <div class="prose-vn font-body-lg text-body-lg text-on-surface mt-space-lg whitespace-pre-line">{{ post.content }}</div>
+            </div>
+        </div>
+    </article>
+
+    <aside class="lg:col-span-4 flex flex-col gap-space-lg">
+        <div class="bg-white rounded-xl shadow-sm p-space-lg">
+            <h2 class="font-headline-sm text-headline-sm text-on-surface mb-space-md flex items-center gap-2">
+                <span class="msym text-[18px] text-primary">library_books</span>Bài viết liên quan
+            </h2>
+            <ul class="flex flex-col gap-space-sm">
+                {% for r in related %}
+                <li>
+                    <a href="{% url 'cms:post_public' r.slug %}" class="group flex items-start gap-space-sm">
+                        <span class="msym text-[16px] text-primary mt-0.5 shrink-0">chevron_right</span>
+                        <div class="min-w-0">
+                            <span class="block font-body-sm text-body-sm text-on-surface group-hover:text-primary">{{ r.title }}</span>
+                            <span class="block font-label-sm text-label-sm text-outline">{{ r.published_at|vn_date }}</span>
+                        </div>
+                    </a>
+                </li>
+                {% empty %}
+                <li class="font-body-sm text-on-surface-variant">Không có bài viết liên quan.</li>
+                {% endfor %}
+            </ul>
+        </div>
+
+        <a href="{% url 'cms:post_list' %}" class="bg-surface-container rounded-xl p-space-lg flex items-center justify-between hover:bg-surface-container-high transition-colors">
+            <span class="font-title-md text-title-md text-on-surface">Xem tất cả tin tức</span>
+            <span class="msym text-[20px] text-primary">arrow_forward</span>
+        </a>
+    </aside>
+</div>
+{% endblock %}

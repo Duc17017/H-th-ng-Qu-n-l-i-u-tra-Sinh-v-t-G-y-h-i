@@ -1,0 +1,35 @@
+{% extends "base_ui.html" %}
+{% block title %}{{ title }}{% endblock %}
+
+{% block page_header %}
+<div class="pt-space-md pb-space-lg">
+  <nav class="flex flex-wrap items-center gap-1 text-on-surface-variant font-label-md text-label-md mb-space-xs">
+    <a href="{% url 'sysadmin:index' %}" class="hover:text-primary">Quản trị hệ thống</a>
+    <span class="msym text-[14px] text-outline">chevron_right</span>
+    <span class="text-primary font-semibold">{{ title }}</span>
+  </nav>
+  <h1 class="font-display-sm text-display-sm text-on-surface tracking-tight">{{ title }}</h1>
+  <p class="font-body-md text-body-md text-on-surface-variant mt-space-2xs">
+    Danh mục dùng chung cho toàn bộ phân hệ điều tra, dự báo và cảnh báo.
+  </p>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-space-md">
+  {% for name, url, count in items %}
+  <a href="{{ url }}" class="group bg-white rounded-xl shadow-sm p-space-lg flex flex-col justify-between gap-space-md hover:shadow-md hover:ring-2 hover:ring-primary/20 transition-all">
+    <div class="flex items-start justify-between">
+      <div class="w-10 h-10 rounded-xl bg-primary-fixed flex items-center justify-center text-primary">
+        <span class="msym text-[22px]">inventory_2</span>
+      </div>
+      <span class="material-symbols-outlined msym text-outline group-hover:text-primary transition-colors text-[20px]">arrow_forward</span>
+    </div>
+    <div>
+      <div class="font-display-sm text-display-sm text-on-surface leading-none">{{ count }}</div>
+      <div class="font-title-md text-title-md text-on-surface-variant mt-1">{{ name }}</div>
+    </div>
+  </a>
+  {% endfor %}
+</div>
+{% endblock %}

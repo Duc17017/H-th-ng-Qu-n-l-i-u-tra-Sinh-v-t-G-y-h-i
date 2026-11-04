@@ -1,0 +1,154 @@
+﻿{% extends "base_ui.html" %}
+{% load ui static %}
+{% block title %}Phân tích diễn biến{% endblock %}
+
+{% block page_header %}
+<div class="pt-space-md pb-space-md flex flex-wrap items-end justify-between gap-space-md">
+  <div class="min-w-0">
+    <nav class="flex flex-wrap items-center gap-1 text-on-surface-variant font-label-md mb-space-xs">
+      <a href="{{ home_url }}" class="hover:text-primary">Tổng quan</a>
+      <span class="msym text-[14px] text-outline">chevron_right</span>
+      <span class="text-primary font-semibold">Phân tích diễn biến</span>
+    </nav>
+    <h1 class="font-display-sm text-display-sm text-on-surface tracking-tight">Phân tích diễn biến sinh vật gây hại</h1>
+    <p class="font-body-md text-body-md text-on-surface-variant max-w-3xl mt-space-2xs">
+      Chỉ sử dụng phiếu điều tra đã được xác nhận. Kết quả là công cụ hỗ trợ, không thay thế kết luận của cán bộ chuyên môn.
+    </p>
+  </div>
+  <a href="{% url 'forecasts:list' %}" class="h-10 px-space-md rounded-xl bg-surface-container hover:bg-surface-container-high text-on-surface font-label-lg inline-flex items-center gap-1.5">
+    <span class="msym text-[18px]">query_stats</span>Nhận định dự báo
+  </a>
+</div>
+{% endblock %}
+
+{% block content %}
+<form class="bg-white rounded-xl shadow-sm p-space-md grid grid-cols-2 md:grid-cols-3 xl:grid-cols-7 gap-space-sm items-end mb-space-lg" method="get">
+  {% for field in form %}
+  <div class="flex flex-col gap-1">
+    <label class="tw-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+    {{ field|field_widget }}
+  </div>
+  {% endfor %}
+  <button class="h-10 rounded-xl bg-primary hover:bg-primary-container text-white font-label-lg inline-flex items-center justify-center gap-1.5" type="submit">
+    <span class="msym text-[18px]">analytics</span>Phân tích
+  </button>
+</form>
+
+{% if ran %}
+  {% if total == 0 %}
+  <div class="rounded-xl bg-surface-container p-space-xl text-center text-on-surface-variant font-body-md">
+    <span class="msym text-[40px] block opacity-30 mb-2">query_stats</span>
+    Không có dữ liệu đã xác nhận phù hợp bộ lọc.
+  </div>
+  {% else %}
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-space-md mb-space-lg">
+    <div class="bg-white rounded-xl shadow-sm p-space-lg flex flex-col justify-between">
+      <div class="flex items-center justify-between">
+        <span class="font-label-md text-label-md text-on-surface-variant">Phiếu đã xác nhận</span>
+        <span class="msym text-[20px] text-primary">fact_check</span>
+      </div>
+      <div class="font-display-lg text-display-lg text-on-surface mt-space-sm">{{ total }}</div>
+    </div>
+    <div class="lg:col-span-2 bg-white rounded-xl shadow-sm p-space-lg flex flex-col justify-between">
+      <div class="flex items-center justify-between">
+        <span class="font-label-md text-label-md text-on-surface-variant">Xu hướng tỷ lệ hại (hồi quy tuyến tính đơn giản)</span>
+        <span class="msym text-[20px] text-primary">trending_up</span>
+      </div>
+      <div class="flex flex-wrap items-baseline gap-space-md mt-space-sm">
+        <span class="font-display-sm text-display-sm text-on-surface">{{ direction }}</span>
+        {% if slope is not None %}
+        <span class="font-label-md text-label-md text-on-surface-variant">Độ dốc: {{ slope|floatformat:3 }} điểm % mỗi kỳ — chỉ mang tính tham khảo</span>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="bg-white rounded-xl shadow-sm p-space-lg mb-space-lg">
+    <div class="flex items-center gap-2 mb-space-md">
+      <span class="msym text-[18px] text-primary">show_chart</span>
+      <h2 class="font-headline-sm text-headline-sm text-on-surface">Diễn biến theo kỳ</h2>
+    </div>
+    <div class="h-80"><canvas id="ch" aria-label="Biểu đồ diễn biến theo kỳ" role="img"></canvas></div>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-space-lg">
+    <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+      <div class="px-space-lg py-space-sm bg-surface-container-low flex items-center gap-2">
+        <span class="msym text-[18px] text-primary">public</span>
+        <h2 class="font-headline-sm text-headline-sm text-on-surface">Theo địa bàn</h2>
+      </div>
+      <table class="w-full text-left border-collapse">
+        <thead><tr class="bg-surface-container text-on-surface-variant font-label-sm text-label-sm uppercase">
+          <th class="py-space-sm px-space-md">Địa bàn</th><th class="py-space-sm px-space-md text-right">Phiếu</th>
+          <th class="py-space-sm px-space-md text-right">DT hại (ha)</th><th class="py-space-sm px-space-md text-right">Tỷ lệ TB (%)</th>
+        </tr></thead>
+        <tbody class="divide-y divide-outline-variant/30 font-body-sm">
+          {% for r in by_division %}
+          <tr class="hover:bg-surface-container-low">
+            <td class="py-space-sm px-space-md">{{ r.label }}</td>
+            <td class="py-space-sm px-space-md text-right font-data-tabular">{{ r.records }}</td>
+            <td class="py-space-sm px-space-md text-right font-data-tabular">{{ r.affected|floatformat:2|default:"—" }}</td>
+            <td class="py-space-sm px-space-md text-right font-data-tabular">{{ r.avg_rate|floatformat:2|default:"—" }}</td>
+          </tr>
+          {% empty %}<tr><td colspan="4" class="py-space-xl text-center text-on-surface-variant">Không có dữ liệu.</td></tr>{% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+      <div class="px-space-lg py-space-sm bg-surface-container-low flex items-center gap-2">
+        <span class="msym text-[18px] text-primary">bug_report</span>
+        <h2 class="font-headline-sm text-headline-sm text-on-surface">Theo sinh vật gây hại</h2>
+      </div>
+      <table class="w-full text-left border-collapse">
+        <thead><tr class="bg-surface-container text-on-surface-variant font-label-sm text-label-sm uppercase">
+          <th class="py-space-sm px-space-md">Sinh vật</th><th class="py-space-sm px-space-md text-right">Phiếu</th>
+          <th class="py-space-sm px-space-md text-right">DT hại (ha)</th><th class="py-space-sm px-space-md text-right">Tỷ lệ TB (%)</th>
+        </tr></thead>
+        <tbody class="divide-y divide-outline-variant/30 font-body-sm">
+          {% for r in by_pest %}
+          <tr class="hover:bg-surface-container-low">
+            <td class="py-space-sm px-space-md">{{ r.label }}</td>
+            <td class="py-space-sm px-space-md text-right font-data-tabular">{{ r.records }}</td>
+            <td class="py-space-sm px-space-md text-right font-data-tabular">{{ r.affected|floatformat:2|default:"—" }}</td>
+            <td class="py-space-sm px-space-md text-right font-data-tabular">{{ r.avg_rate|floatformat:2|default:"—" }}</td>
+          </tr>
+          {% empty %}<tr><td colspan="4" class="py-space-xl text-center text-on-surface-variant">Không có dữ liệu.</td></tr>{% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+{% if ran and total %}
+<script src="{% static 'vendor/chartjs/chart.umd.min.js' %}"></script>
+{{ chart_labels|json_script:"c-labels" }}{{ chart_rate|json_script:"c-rate" }}{{ chart_area|json_script:"c-area" }}
+<script>
+(function () {
+    function J(i) { return JSON.parse(document.getElementById(i).textContent); }
+    new Chart(document.getElementById('ch'), {
+        type: 'line',
+        data: {
+            labels: J('c-labels'),
+            datasets: [
+                { label: 'Tỷ lệ hại TB (%)', data: J('c-rate'), borderColor: '#c62828', backgroundColor: 'rgba(198,40,40,.12)', yAxisID: 'y', spanGaps: true, tension: .3, fill: true },
+                { label: 'Diện tích bị hại (ha)', data: J('c-area'), borderColor: '#15803d', backgroundColor: 'rgba(21,128,61,.10)', yAxisID: 'y1', spanGaps: true, tension: .3 }
+            ]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { labels: { font: { family: 'Inter', size: 12 }, boxWidth: 12 } } },
+            scales: {
+                y: { position: 'left', title: { display: true, text: '%', font: { family: 'Inter' } }, ticks: { font: { family: 'Inter' } } },
+                y1: { position: 'right', grid: { drawOnChartArea: false }, title: { display: true, text: 'ha', font: { family: 'Inter' } }, ticks: { font: { family: 'Inter' } } },
+                x: { ticks: { font: { family: 'Inter', size: 11 } } }
+            }
+        }
+    });
+})();
+</script>
+{% endif %}
+{% endblock %}

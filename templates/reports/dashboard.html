@@ -1,0 +1,185 @@
+﻿{% extends "base_ui.html" %}
+{% load ui static %}
+{% block title %}Bảng điều hành{% endblock %}
+
+{% block page_header %}
+<div class="pt-space-md pb-space-md flex flex-wrap items-end justify-between gap-space-md">
+  <div class="min-w-0">
+    <nav class="flex flex-wrap items-center gap-1 text-on-surface-variant font-label-md mb-space-xs">
+      <a href="{% url 'cms:home' %}" class="hover:text-primary">Trang chủ</a>
+      <span class="msym text-[14px] text-outline">chevron_right</span>
+      <span class="text-primary font-semibold">Tổng quan giám sát</span>
+    </nav>
+    <h1 class="font-display-sm text-display-sm text-on-surface tracking-tight">Bảng điều hành giám sát</h1>
+    <p class="font-body-md text-body-md text-on-surface-variant mt-space-2xs">
+      Tình hình sinh vật gây hại, tiến độ điều tra và cảnh báo đang có hiệu lực trên địa bàn quản lý.
+    </p>
+  </div>
+  <div class="flex flex-wrap items-center gap-space-sm">
+    <a href="{% url 'mapview:map' %}" class="h-10 px-space-md rounded-xl bg-surface-container hover:bg-surface-container-high text-on-surface font-label-lg inline-flex items-center gap-1.5">
+      <span class="msym text-[18px]">map</span>Bản đồ GIS
+    </a>
+    <a href="{% url 'reports:summary' %}" class="h-10 px-space-lg rounded-xl bg-primary hover:bg-primary-container text-white font-label-lg inline-flex items-center gap-2 shadow-sm">
+      <span class="msym text-[20px]">summarize</span>Tổng hợp dữ liệu
+    </a>
+  </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- KPI cards -->
+<div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-space-md mb-space-lg">
+  {% for label, val, url in cards %}
+  <a href="{{ url }}" class="bg-white rounded-xl shadow-sm p-space-md flex flex-col justify-between gap-space-sm hover:shadow-md hover:ring-2 hover:ring-primary/20 transition-all group">
+    <span class="font-label-md text-label-md text-on-surface-variant line-clamp-2">{{ label }}</span>
+    <div class="flex items-end justify-between">
+      <span class="font-display-sm text-display-sm text-on-surface leading-none">{{ val }}</span>
+      <span class="msym text-[18px] text-outline group-hover:text-primary transition-colors">arrow_forward</span>
+    </div>
+  </a>
+  {% endfor %}
+</div>
+
+<div class="grid grid-cols-1 xl:grid-cols-12 gap-space-lg mb-space-lg">
+  <div class="xl:col-span-8 bg-white rounded-xl shadow-sm overflow-hidden">
+    <div class="px-space-lg py-space-sm bg-surface-container-low flex items-center gap-2">
+      <span class="msym text-[18px] text-primary">show_chart</span>
+      <h2 class="font-headline-sm text-headline-sm text-on-surface">Diễn biến 6 tháng gần nhất</h2>
+    </div>
+    <div class="p-space-lg h-80"><canvas id="trend" role="img" aria-label="Biểu đồ diễn biến tỷ lệ hại và diện tích"></canvas></div>
+  </div>
+
+  <div class="xl:col-span-4 bg-white rounded-xl shadow-sm overflow-hidden">
+    <div class="px-space-lg py-space-sm bg-surface-container-low flex items-center gap-2">
+      <span class="msym text-[18px] text-primary">checklist</span>
+      <h2 class="font-headline-sm text-headline-sm text-on-surface">Tiến độ nhiệm vụ điều tra</h2>
+    </div>
+    <div class="p-space-lg flex flex-col gap-space-sm">
+      <div class="flex items-end gap-space-sm">
+        <span class="font-display-lg text-display-lg text-primary leading-none">{{ task_pct }}%</span>
+        <span class="font-label-md text-label-md text-on-surface-variant pb-1">{{ s.tasks_done }}/{{ s.tasks_total }} nhiệm vụ</span>
+      </div>
+      <div class="w-full bg-surface-container rounded-full h-2.5 overflow-hidden"
+           role="progressbar" aria-valuenow="{{ task_pct }}" aria-valuemin="0" aria-valuemax="100" aria-label="Tiến độ nhiệm vụ">
+        <div class="bg-primary h-full rounded-full transition-all" style="width: {{ task_pct }}%"></div>
+      </div>
+      <div class="grid grid-cols-3 gap-space-xs pt-space-xs">
+        <div class="bg-surface-container-low rounded-lg p-space-xs text-center">
+          <div class="font-headline-sm text-headline-sm {% if s.tasks_overdue %}text-tertiary{% else %}text-on-surface{% endif %}">{{ s.tasks_overdue }}</div>
+          <div class="font-label-sm text-label-sm text-on-surface-variant">Quá hạn</div>
+        </div>
+        <div class="bg-surface-container-low rounded-lg p-space-xs text-center">
+          <div class="font-headline-sm text-headline-sm text-secondary">{{ s.records_pending }}</div>
+          <div class="font-label-sm text-label-sm text-on-surface-variant">Chờ xác nhận</div>
+        </div>
+        <div class="bg-surface-container-low rounded-lg p-space-xs text-center">
+          <div class="font-headline-sm text-headline-sm text-tertiary">{{ s.records_revision }}</div>
+          <div class="font-label-sm text-label-sm text-on-surface-variant">Yêu cầu bổ sung</div>
+        </div>
+      </div>
+      <div class="pt-space-sm border-t border-outline-variant/30 font-body-sm text-body-sm text-on-surface-variant">
+        <span class="font-label-sm text-label-sm text-outline uppercase block mb-1">Tháng này</span>
+        {{ s.records_month }} phiếu xác nhận · {{ s.points_month }} điểm ·
+        {{ s.surveyed_month|floatformat:1 }} ha điều tra · {{ s.affected_month|floatformat:1 }} ha bị hại
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="grid grid-cols-1 xl:grid-cols-3 gap-space-lg">
+  <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+    <div class="px-space-lg py-space-sm bg-surface-container-low flex items-center gap-2">
+      <span class="msym text-[18px] text-primary">donut_large</span>
+      <h2 class="font-headline-sm text-headline-sm text-on-surface">Diện tích bị hại theo sinh vật</h2>
+    </div>
+    <div class="p-space-lg h-64"><canvas id="pest" role="img" aria-label="Biểu đồ diện tích bị hại theo sinh vật"></canvas></div>
+  </div>
+
+  <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+    <div class="px-space-lg py-space-sm bg-surface-container-low flex items-center gap-2">
+      <span class="msym text-[18px] text-primary">public</span>
+      <h2 class="font-headline-sm text-headline-sm text-on-surface">Địa bàn có tỷ lệ hại cao</h2>
+    </div>
+    <ul class="divide-y divide-outline-variant/30">
+      {% for r in div_rows %}
+      <li class="px-space-lg py-space-sm flex items-center justify-between gap-space-sm">
+        <span class="font-body-sm text-body-sm text-on-surface truncate">{{ r.label }}</span>
+        <span class="font-data-tabular text-data-tabular font-semibold {% if r.avg_rate and r.avg_rate >= 30 %}text-tertiary{% else %}text-on-surface{% endif %}">
+          {{ r.avg_rate|floatformat:1|default:"—" }}%
+        </span>
+      </li>
+      {% empty %}
+      <li class="px-space-lg py-space-md text-center font-body-sm text-on-surface-variant">Chưa có dữ liệu.</li>
+      {% endfor %}
+    </ul>
+  </div>
+
+  <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+    <div class="px-space-lg py-space-sm bg-surface-container-low flex items-center gap-2">
+      <span class="msym text-[18px] text-primary">campaign</span>
+      <h2 class="font-headline-sm text-headline-sm text-on-surface">Cảnh báo &amp; dự báo hiện hành</h2>
+    </div>
+    <ul class="divide-y divide-outline-variant/30">
+      {% for a in alerts %}
+      <li class="px-space-lg py-space-sm flex items-start gap-space-sm">
+        {{ a|risk_badge }}
+        <a href="{% url 'alerts:alert_detail' a.pk %}" class="font-body-sm text-body-sm text-on-surface hover:text-primary line-clamp-2">{{ a.title }}</a>
+      </li>
+      {% endfor %}
+      {% for f in forecasts %}
+      <li class="px-space-lg py-space-sm flex items-start gap-space-sm">
+        {{ f|risk_badge }}
+        <a href="{% url 'forecasts:detail' f.pk %}" class="font-body-sm text-body-sm text-on-surface hover:text-primary line-clamp-2">{{ f.title }}</a>
+      </li>
+      {% endfor %}
+      {% if not alerts and not forecasts %}
+      <li class="px-space-lg py-space-md text-center font-body-sm text-on-surface-variant">Không có cảnh báo hay dự báo hiện hành.</li>
+      {% endif %}
+    </ul>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'vendor/chartjs/chart.umd.min.js' %}"></script>
+{{ labels|json_script:"d-labels" }}{{ rate|json_script:"d-rate" }}{{ area|json_script:"d-area" }}{{ pest_labels|json_script:"d-pl" }}{{ pest_values|json_script:"d-pv" }}
+<script>
+(function () {
+    function J(i) { return JSON.parse(document.getElementById(i).textContent); }
+    new Chart(document.getElementById('trend'), {
+        type: 'line',
+        data: {
+            labels: J('d-labels'),
+            datasets: [
+                { label: 'Tỷ lệ hại TB (%)', data: J('d-rate'), borderColor: '#c62828', backgroundColor: 'rgba(198,40,40,.12)', yAxisID: 'y', spanGaps: true, tension: .3, fill: true },
+                { label: 'Diện tích bị hại (ha)', data: J('d-area'), borderColor: '#15803d', backgroundColor: 'rgba(21,128,61,.10)', yAxisID: 'y1', spanGaps: true, tension: .3 }
+            ]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { labels: { font: { family: 'Inter', size: 12 }, boxWidth: 12 } } },
+            scales: {
+                y: { position: 'left', ticks: { font: { family: 'Inter' } } },
+                y1: { position: 'right', grid: { drawOnChartArea: false }, ticks: { font: { family: 'Inter' } } },
+                x: { ticks: { font: { family: 'Inter', size: 11 } } }
+            }
+        }
+    });
+    new Chart(document.getElementById('pest'), {
+        type: 'doughnut',
+        data: {
+            labels: J('d-pl'),
+            datasets: [{
+                data: J('d-pv'),
+                backgroundColor: ['#15803d', '#b20010', '#fe932c', '#1565c0', '#6a1b9a', '#00838f', '#904d00', '#5d4037'],
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false, cutout: '58%',
+            plugins: { legend: { position: 'bottom', labels: { font: { family: 'Inter', size: 11 }, boxWidth: 10 } } }
+        }
+    });
+})();
+</script>
+{% endblock %}

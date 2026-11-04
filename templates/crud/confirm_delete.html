@@ -1,0 +1,26 @@
+{% extends "base_ui.html" %}
+{% block title %}Xóa {{ crud.title }}{% endblock %}
+
+{% block content %}
+<div class="max-w-xl mx-auto pt-space-xl">
+  <div class="bg-white rounded-xl shadow-sm overflow-hidden ring-1 ring-error/30">
+    <div class="px-space-lg py-space-md bg-error-container text-on-error-container flex items-center gap-2">
+      <span class="msym text-[20px]">warning</span>
+      <h1 class="font-headline-sm text-headline-sm font-bold">Xác nhận xóa</h1>
+    </div>
+    <div class="p-space-xl flex flex-col gap-space-lg">
+      <p class="font-body-md text-body-md text-on-surface">
+        Bạn chắc chắn muốn xóa <strong class="text-tertiary">{{ obj }}</strong>?
+        Thao tác này được ghi vào nhật ký kiểm toán và không thể hoàn tác.
+      </p>
+      <form method="post" class="flex flex-wrap items-center gap-space-sm">
+        {% csrf_token %}
+        <button class="h-10 px-space-lg rounded-xl bg-tertiary-container hover:bg-tertiary text-white font-label-lg inline-flex items-center gap-2" type="submit">
+          <span class="msym text-[20px]">delete_forever</span>Xóa vĩnh viễn
+        </button>
+        <a class="h-10 px-space-lg rounded-xl bg-surface-container hover:bg-surface-container-high text-on-surface font-label-lg inline-flex items-center" href="{{ back_url }}">Hủy</a>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

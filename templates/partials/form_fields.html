@@ -1,0 +1,18 @@
+{% load ui %}
+{% if form.non_field_errors %}
+<div class="col-span-full flex items-start gap-space-sm px-space-md py-space-sm rounded-xl bg-error-container text-on-error-container font-body-sm">
+  <span class="msym text-[18px] shrink-0">error</span>
+  <div>{{ form.non_field_errors }}</div>
+</div>
+{% endif %}
+<div class="grid grid-cols-1 md:grid-cols-2 gap-space-md">
+{% for field in form %}
+  {% if field.is_hidden %}
+    {{ field }}
+  {% else %}
+    <div class="{% if field.field.widget.input_type == 'textarea' or field.field.widget.input_type == 'file' %}md:col-span-2{% endif %}">
+      {% include "partials/ui_field.html" with field=field %}
+    </div>
+  {% endif %}
+{% endfor %}
+</div>

@@ -1,0 +1,66 @@
+{% extends "base_ui.html" %}
+{% load ui %}
+{% block title %}Lịch sử đăng nhập{% endblock %}
+
+{% block page_header %}
+<div class="pt-space-md pb-space-md flex flex-wrap items-end justify-between gap-space-md">
+  <div class="min-w-0">
+    <nav class="flex flex-wrap items-center gap-1 text-on-surface-variant font-label-md mb-space-xs">
+      <a href="{% url 'sysadmin:index' %}" class="hover:text-primary">Quản trị hệ thống</a>
+      <span class="msym text-[14px] text-outline">chevron_right</span>
+      <span class="text-primary font-semibold">Lịch sử đăng nhập</span>
+    </nav>
+    <h1 class="font-display-sm text-display-sm text-on-surface tracking-tight">Lịch sử đăng nhập</h1>
+  </div>
+  <div class="flex flex-wrap items-center gap-space-sm">
+    <a class="h-10 px-space-md rounded-xl bg-error-container text-on-error-container font-label-lg inline-flex items-center gap-1.5" href="?failed=1">
+      <span class="msym text-[18px]">gpp_bad</span>Chỉ lần thất bại
+    </a>
+    <a class="h-10 px-space-md rounded-xl bg-surface-container hover:bg-surface-container-high text-on-surface font-label-lg inline-flex items-center" href="?">Tất cả</a>
+  </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="bg-white rounded-xl shadow-sm overflow-hidden">
+  <div class="overflow-x-auto">
+    <table class="w-full text-left border-collapse">
+      <thead>
+        <tr class="bg-surface-container text-on-surface-variant font-label-sm text-label-sm uppercase tracking-wider">
+          <th class="py-space-sm px-space-md">Thời điểm</th>
+          <th class="py-space-sm px-space-md">Tài khoản</th>
+          <th class="py-space-sm px-space-md">Sự kiện</th>
+          <th class="py-space-sm px-space-md">Kết quả</th>
+          <th class="py-space-sm px-space-md">IP</th>
+          <th class="py-space-sm px-space-md">Thiết bị</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-outline-variant/30 font-body-sm text-body-sm">
+        {% for l in page %}
+        <tr class="hover:bg-surface-container-low {% if not l.success %}bg-error-container/10{% endif %}">
+          <td class="py-space-sm px-space-md whitespace-nowrap font-data-tabular text-data-tabular">{{ l.created_at|vn_date }}</td>
+          <td class="py-space-sm px-space-md font-semibold text-on-surface">{{ l.username }}</td>
+          <td class="py-space-sm px-space-md text-on-surface-variant">{{ l.event }}</td>
+          <td class="py-space-sm px-space-md">
+            {% if l.success %}
+            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary-fixed text-on-primary-fixed font-label-sm font-semibold">
+              <span class="msym text-[13px]">check_circle</span>Thành công
+            </span>
+            {% else %}
+            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-error-container text-on-error-container font-label-sm font-semibold">
+              <span class="msym text-[13px]">cancel</span>Thất bại
+            </span>
+            {% endif %}
+          </td>
+          <td class="py-space-sm px-space-md font-data-tabular text-data-tabular text-on-surface-variant">{{ l.ip_address|default:"—" }}</td>
+          <td class="py-space-sm px-space-md font-label-sm text-label-sm text-outline">{{ l.user_agent|truncatechars:60 }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6" class="py-space-3xl text-center text-on-surface-variant">Chưa có dữ liệu.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% include "partials/pagination.html" %}
+{% endblock %}

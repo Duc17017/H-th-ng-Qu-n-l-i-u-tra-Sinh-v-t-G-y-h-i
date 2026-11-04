@@ -1,0 +1,35 @@
+{% extends "base_ui.html" %}
+{% load ui %}
+{% block title %}{{ title }}{% endblock %}
+
+{% block page_header %}
+<div class="pt-space-md pb-space-lg">
+  <nav class="flex flex-wrap items-center gap-1 text-on-surface-variant font-label-md text-label-md mb-space-xs">
+    <a href="{{ back_url }}" class="hover:text-primary">Danh sách</a>
+    <span class="msym text-[14px] text-outline">chevron_right</span>
+    <span class="text-primary font-semibold">{{ title }}</span>
+  </nav>
+  <h1 class="font-display-sm text-display-sm text-on-surface tracking-tight">{{ title }}</h1>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl">
+  <form method="post" enctype="multipart/form-data" novalidate class="bg-white rounded-xl shadow-sm p-space-xl flex flex-col gap-space-lg">
+    {% csrf_token %}
+    {% if form.non_field_errors %}
+    <div class="flex items-start gap-space-sm px-space-md py-space-sm rounded-xl bg-error-container text-on-error-container font-body-sm">
+      <span class="msym text-[18px]">error</span>
+      <div>{{ form.non_field_errors }}</div>
+    </div>
+    {% endif %}
+    {% include "partials/form_fields.html" %}
+    <div class="flex flex-wrap items-center gap-space-sm pt-space-md border-t border-outline-variant/30">
+      <button class="h-10 px-space-lg rounded-xl bg-primary hover:bg-primary-container text-white font-label-lg text-label-lg inline-flex items-center gap-2 shadow-sm transition-colors" type="submit">
+        <span class="msym text-[20px]">save</span><span>Lưu</span>
+      </button>
+      <a class="h-10 px-space-lg rounded-xl bg-surface-container hover:bg-surface-container-high text-on-surface font-label-lg text-label-lg inline-flex items-center" href="{{ back_url }}">Hủy</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

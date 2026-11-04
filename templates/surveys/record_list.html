@@ -1,0 +1,108 @@
+﻿{% extends "base_ui.html" %}
+{% load ui %}
+{% block title %}Phiếu điều tra{% endblock %}
+
+{% block page_header %}
+<div class="pt-space-md pb-space-lg flex flex-wrap items-end justify-between gap-space-md">
+  <div class="min-w-0">
+    <nav class="flex flex-wrap items-center gap-1 text-on-surface-variant font-label-md text-label-md mb-space-xs">
+      <a href="{{ home_url }}" class="hover:text-primary">Tổng quan</a>
+      <span class="msym text-[14px] text-outline">chevron_right</span>
+      <span class="text-primary font-semibold">Phiếu điều tra</span>
+    </nav>
+    <h1 class="font-display-sm text-display-sm text-on-surface tracking-tight">Phiếu điều tra hiện trường</h1>
+    <p class="font-body-md text-body-md text-on-surface-variant mt-space-2xs">
+      Dữ liệu điều tra theo Quy chuẩn kỹ thuật quốc gia — kiểm tra trùng lặp, sai số GPS và tính hợp lệ trước khi xác nhận.
+    </p>
+  </div>
+  <div class="flex flex-wrap items-center gap-space-sm">
+    {% if can_import %}
+    <a href="{% url 'surveys:import' %}" class="h-10 px-space-md rounded-xl bg-surface-container hover:bg-surface-container-high text-on-surface font-label-lg inline-flex items-center gap-1.5">
+      <span class="msym text-[18px]">upload_file</span>Nhập Excel
+    </a>
+    {% endif %}
+    {% if can_create %}
+    <a href="{% url 'surveys:record_create' %}" class="h-10 px-space-lg rounded-xl bg-primary hover:bg-primary-container text-white font-label-lg inline-flex items-center gap-2 shadow-sm">
+      <span class="msym text-[20px]">add</span>Phiếu mới
+    </a>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="bg-white rounded-xl shadow-sm overflow-hidden">
+  <form method="get" class="p-space-md bg-surface-container-low border-b border-outline-variant/30 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-space-sm">
+    <div class="flex flex-col gap-1 lg:col-span-2">
+      <label class="tw-label" for="fq">Tìm kiếm</label>
+      <input class="tw-input" id="fq" type="search" name="q" value="{{ flt.q.value|default:'' }}" placeholder="Mã điểm, tên điểm, nhận xét...">
+    </div>
+    <div class="flex flex-col gap-1">
+      <label class="tw-label" for="ftu">Trạng thái</label>
+      {{ flt.status|field_widget }}
+    </div>
+    <div class="flex flex-col gap-1">
+      <label class="tw-label" for="fcrop">Cây trồng</label>
+      {{ flt.crop|field_widget }}
+    </div>
+    <div class="flex flex-col gap-1">
+      <label class="tw-label" for="fpest">Sinh vật gây hại</label>
+      {{ flt.pest|field_widget }}
+    </div>
+    <div class="flex items-end gap-space-xs">
+      <button class="h-10 px-space-md rounded-xl bg-primary text-white font-label-lg inline-flex items-center gap-1.5" type="submit">
+        <span class="msym text-[18px]">filter_alt</span>Lọc
+      </button>
+      <a class="h-10 px-space-md rounded-xl bg-surface-container text-on-surface font-label-lg inline-flex items-center" href="?">Xóa</a>
+    </div>
+  </form>
+
+  <div class="overflow-x-auto">
+    <table class="w-full text-left border-collapse">
+      <thead>
+        <tr class="bg-surface-container text-on-surface-variant font-label-sm text-label-sm uppercase tracking-wider">
+          <th class="py-space-sm px-space-md">Điểm / Ngày</th>
+          <th class="py-space-sm px-space-md">Cây trồng &amp; SVGH</th>
+          <th class="py-space-sm px-space-md text-right">Mật độ</th>
+          <th class="py-space-sm px-space-md text-right">Tỷ lệ hại</th>
+          <th class="py-space-sm px-space-md">Cán bộ</th>
+          <th class="py-space-sm px-space-md">Trạng thái</th>
+          <th class="py-space-sm px-space-md w-20"></th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-outline-variant/30">
+        {% for rec in page %}
+        <tr class="hover:bg-surface-container-low transition-colors font-body-sm text-body-sm">
+          <td class="py-space-sm px-space-md">
+            <a href="{% url 'surveys:record_detail' rec.pk %}" class="font-title-md text-title-md text-on-surface hover:text-primary block">
+              {{ rec.point.code }} — {{ rec.point.name }}
+            </a>
+            <span class="font-label-sm text-label-sm text-outline">{{ rec.survey_date|vn_date }}</span>
+          </td>
+          <td class="py-space-sm px-space-md">
+            <span class="block text-on-surface">{{ rec.crop.name }}</span>
+            <span class="font-label-sm text-label-sm text-on-surface-variant">{{ rec.pest.name }}</span>
+          </td>
+          <td class="py-space-sm px-space-md text-right font-data-tabular text-data-tabular">{{ rec.density|num }}</td>
+          <td class="py-space-sm px-space-md text-right font-data-tabular text-data-tabular">
+            {% if rec.damage_rate is not None %}{{ rec.damage_rate|num }}%{% else %}—{% endif %}
+          </td>
+          <td class="py-space-sm px-space-md text-on-surface-variant">{{ rec.surveyor.display_name|default:"—" }}</td>
+          <td class="py-space-sm px-space-md">{{ rec|state_badge }}</td>
+          <td class="py-space-sm px-space-md text-right">
+            <a href="{% url 'surveys:record_detail' rec.pk %}" class="inline-flex w-8 h-8 items-center justify-center rounded-lg bg-surface-container hover:bg-surface-container-high" title="Xem">
+              <span class="msym text-[18px]">visibility</span>
+            </a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="7" class="py-space-3xl text-center text-on-surface-variant font-body-md">
+          <span class="msym text-[40px] block opacity-30 mb-2">inbox</span>Chưa có phiếu điều tra nào.
+        </td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% include "partials/pagination.html" %}
+{% endblock %}

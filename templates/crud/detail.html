@@ -1,0 +1,87 @@
+{% extends "base_ui.html" %}
+{% load ui %}
+{% block title %}{{ obj }}{% endblock %}
+
+{% block page_header %}
+<div class="pt-space-md pb-space-lg flex flex-wrap items-end justify-between gap-space-md">
+  <div class="min-w-0">
+    <nav class="flex flex-wrap items-center gap-1 text-on-surface-variant font-label-md text-label-md mb-space-xs">
+      <a href="{{ back_url }}" class="hover:text-primary">{{ crud.title }}</a>
+      <span class="msym text-[14px] text-outline">chevron_right</span>
+      <span class="text-primary font-semibold truncate">{{ obj }}</span>
+    </nav>
+    <h1 class="font-display-sm text-display-sm text-on-surface tracking-tight truncate">{{ obj }}</h1>
+  </div>
+  <div class="flex flex-wrap items-center gap-space-sm">
+    <a class="h-10 px-space-md rounded-xl bg-surface-container hover:bg-surface-container-high text-on-surface font-label-lg inline-flex items-center gap-1.5" href="{{ back_url }}">
+      <span class="msym text-[18px]">arrow_back</span>Quay lại
+    </a>
+    {% if can_edit %}
+    <a class="h-10 px-space-md rounded-xl bg-primary hover:bg-primary-container text-white font-label-lg inline-flex items-center gap-1.5" href="{{ edit_url }}">
+      <span class="msym text-[18px]">edit</span>Sửa
+    </a>
+    {% endif %}
+    {% if can_delete %}
+    <a class="h-10 px-space-md rounded-xl bg-error-container hover:bg-tertiary-container hover:text-white text-on-error-container font-label-lg inline-flex items-center gap-1.5" href="{{ delete_url }}">
+      <span class="msym text-[18px]">delete</span>Xóa
+    </a>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-space-lg">
+  <div class="lg:col-span-7 bg-white rounded-xl shadow-sm overflow-hidden">
+    <div class="px-space-lg py-space-md bg-surface-container-low border-b border-outline-variant/30 flex items-center gap-2">
+      <span class="msym text-[18px] text-primary">info</span>
+      <h2 class="font-headline-sm text-headline-sm text-on-surface">Thông tin chi tiết</h2>
+    </div>
+    <dl class="divide-y divide-outline-variant/20">
+      {% for label, val in fields %}
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-space-xs px-space-lg py-space-sm">
+        <dt class="font-label-md text-label-md text-on-surface-variant sm:col-span-1">{{ label }}</dt>
+        <dd class="font-body-sm text-body-sm text-on-surface sm:col-span-2 break-words">{{ val|default_if_none:"—"|default:"—" }}</dd>
+      </div>
+      {% endfor %}
+    </dl>
+  </div>
+
+  <div class="lg:col-span-5 bg-white rounded-xl shadow-sm overflow-hidden h-fit">
+    <div class="px-space-lg py-space-md bg-surface-container-low border-b border-outline-variant/30 flex items-center gap-2">
+      <span class="msym text-[18px] text-primary">history</span>
+      <h2 class="font-headline-sm text-headline-sm text-on-surface">Lịch sử thay đổi</h2>
+    </div>
+    <ul class="divide-y divide-outline-variant/20 max-h-[32rem] overflow-y-auto">
+      {% for h in history %}
+      <li class="px-space-lg py-space-sm">
+        <div class="flex items-start gap-space-sm">
+          <div class="w-7 h-7 rounded-full {{ h.action|audit_icon:'class' }} flex items-center justify-center shrink-0 mt-0.5">
+            <span class="msym text-[15px]">{{ h.action|audit_icon:"icon" }}</span>
+          </div>
+          <div class="min-w-0 flex-1">
+            <p class="font-body-sm text-body-sm text-on-surface">
+              <strong>{{ h.get_action_display|default:h.action }}</strong>
+              <span class="text-on-surface-variant">· {{ h.username|default:"hệ thống" }}</span>
+            </p>
+            <p class="font-label-sm text-label-sm text-outline">{{ h.created_at|vn_date }}</p>
+            {% if h.changes %}
+            <ul class="mt-1 flex flex-col gap-0.5">
+              {% for k, v in h.changes.items %}
+              <li class="font-label-sm text-label-sm text-on-surface-variant">
+                <span class="text-outline">{{ k }}:</span>
+                <span class="line-through mr-1">{{ v.0|default:"∅" }}</span>→ <span class="text-primary font-semibold">{{ v.1|default:"∅" }}</span>
+              </li>
+              {% endfor %}
+            </ul>
+            {% endif %}
+          </div>
+        </div>
+      </li>
+      {% empty %}
+      <li class="px-space-lg py-space-xl text-center text-on-surface-variant font-body-sm">Chưa có lịch sử.</li>
+      {% endfor %}
+    </ul>
+  </div>
+</div>
+{% endblock %}

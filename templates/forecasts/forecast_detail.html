@@ -1,0 +1,250 @@
+{% extends "base_ui.html" %}
+{% load ui %}
+{% block title %}{{ fc.title }}{% endblock %}
+
+{% block page_header %}
+<div class="pt-space-md pb-space-md flex flex-wrap items-end justify-between gap-space-md">
+  <div class="min-w-0">
+    <nav class="flex flex-wrap items-center gap-1 text-on-surface-variant font-label-md mb-space-xs">
+      <a href="{% url 'forecasts:list' %}" class="hover:text-primary">Nhận định dự báo</a>
+      <span class="msym text-[14px] text-outline">chevron_right</span>
+      <span class="text-primary font-semibold truncate">{{ fc.title }}</span>
+    </nav>
+    <div class="flex flex-wrap items-center gap-space-sm">
+      <h1 class="font-display-sm text-display-sm text-on-surface tracking-tight">{{ fc.title }}</h1>
+      {{ fc|state_badge }}
+      {{ fc|risk_badge }}
+    </div>
+    <p class="font-body-md text-body-md text-on-surface-variant mt-space-2xs">
+      {{ fc.pest }} · {{ fc.crop }} · {{ fc.division.full_name }}
+    </p>
+  </div>
+  <div class="flex flex-wrap items-center gap-space-sm">
+    <a class="h-10 px-space-md rounded-xl bg-surface-container hover:bg-surface-container-high text-on-surface font-label-lg inline-flex items-center gap-1.5" href="{% url 'forecasts:list' %}">
+      <span class="msym text-[18px]">arrow_back</span>Danh sách
+    </a>
+    {% if can_edit %}
+    <a class="h-10 px-space-md rounded-xl bg-primary hover:bg-primary-container text-white font-label-lg inline-flex items-center gap-1.5" href="{% url 'forecasts:edit' fc.pk %}">
+      <span class="msym text-[18px]">edit</span>Sửa
+    </a>
+    {% endif %}
+    {% if fc.status == 'confirmed' %}
+    <a class="h-10 px-space-md rounded-xl bg-secondary-fixed text-on-secondary-fixed font-label-lg inline-flex items-center gap-1.5" href="{% url 'alerts:alert_from_forecast' fc.pk %}">
+      <span class="msym text-[18px]">campaign</span>Tạo cảnh báo
+    </a>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block content %}
+{% if fc.origin == 'auto' and fc.status != 'confirmed' %}
+<div class="flex items-start gap-space-sm px-space-md py-space-sm rounded-xl bg-secondary-fixed text-on-secondary-fixed font-body-sm mb-space-md">
+  <span class="msym text-[18px] shrink-0">smart_toy</span>
+  <span>Nhận định do hệ thống gợi ý tự động. Cần cán bộ chuyên môn xem xét, bổ sung khuyến nghị và xác nhận
+    trước khi dùng làm căn cứ phát hành cảnh báo.</span>
+</div>
+{% endif %}
+
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-space-lg">
+  <div class="lg:col-span-8 flex flex-col gap-space-lg">
+    <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+      <div class="px-space-lg py-space-sm bg-surface-container-low flex items-center gap-2">
+        <span class="msym text-[18px] text-primary">query_stats</span>
+        <h2 class="font-headline-sm text-headline-sm text-on-surface">Nội dung nhận định</h2>
+      </div>
+      <dl class="divide-y divide-outline-variant/20">
+        <div class="grid grid-cols-1 sm:grid-cols-4 gap-space-xs px-space-lg py-space-sm">
+          <dt class="font-label-md text-on-surface-variant">Sinh vật / cây trồng</dt>
+          <dd class="font-body-sm text-on-surface sm:col-span-3">{{ fc.pest }} / {{ fc.crop }}{% if fc.stage %} · {{ fc.stage }}{% endif %}</dd>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-4 gap-space-xs px-space-lg py-space-sm">
+          <dt class="font-label-md text-on-surface-variant">Phạm vi dự báo</dt>
+          <dd class="font-body-sm text-on-surface sm:col-span-3">{{ fc.division.full_name }}</dd>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-4 gap-space-xs px-space-lg py-space-sm">
+          <dt class="font-label-md text-on-surface-variant">Thời gian</dt>
+          <dd class="font-body-sm text-on-surface sm:col-span-3 font-data-tabular">{{ fc.valid_from|vn_date }} – {{ fc.valid_to|vn_date }}</dd>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-4 gap-space-xs px-space-lg py-space-sm bg-surface-container-low">
+          <dt class="font-label-md text-on-surface-variant">Dự kiến</dt>
+          <dd class="font-body-sm text-on-surface sm:col-span-3 flex flex-wrap gap-space-lg">
+            <span>Tỷ lệ hại <strong class="font-data-tabular">{{ fc.expected_rate|floatformat:2|default:"—" }}%</strong></span>
+            <span>Diện tích <strong class="font-data-tabular">{{ fc.expected_area|floatformat:2|default:"—" }} ha</strong></span>
+          </dd>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-4 gap-space-xs px-space-lg py-space-sm">
+          <dt class="font-label-md text-on-surface-variant">Tiêu chí áp dụng</dt>
+          <dd class="font-body-sm text-on-surface sm:col-span-3">{{ fc.threshold|default:"—" }}</dd>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-4 gap-space-xs px-space-lg py-space-sm">
+          <dt class="font-label-md text-on-surface-variant">Căn cứ dữ liệu</dt>
+          <dd class="font-body-sm text-on-surface sm:col-span-3">{{ fc.basis|linebreaksbr }}</dd>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-4 gap-space-xs px-space-lg py-space-sm">
+          <dt class="font-label-md text-on-surface-variant">Khuyến nghị</dt>
+          <dd class="font-body-sm text-on-surface sm:col-span-3">{{ fc.recommendation|default:"—"|linebreaksbr }}</dd>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-4 gap-space-xs px-space-lg py-space-sm">
+          <dt class="font-label-md text-on-surface-variant">Người lập / xác nhận</dt>
+          <dd class="font-body-sm text-on-surface sm:col-span-3">
+            {{ fc.created_by|default:"—" }} / {{ fc.confirmed_by|default:"—" }}
+            {% if fc.confirmed_at %}<span class="text-on-surface-variant">({{ fc.confirmed_at|vn_date }})</span>{% endif %}
+          </dd>
+        </div>
+        {% if fc.review_note %}
+        <div class="grid grid-cols-1 sm:grid-cols-4 gap-space-xs px-space-lg py-space-sm">
+          <dt class="font-label-md text-on-surface-variant">Ý kiến xác nhận</dt>
+          <dd class="font-body-sm text-on-surface sm:col-span-3">{{ fc.review_note }}</dd>
+        </div>
+        {% endif %}
+      </dl>
+    </div>
+
+    {% if meta %}
+    <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+      <div class="px-space-lg py-space-sm bg-surface-container-low flex items-center gap-2">
+        <span class="msym text-[18px] text-primary">schema</span>
+        <h2 class="font-headline-sm text-headline-sm text-on-surface">Truy xuất nguồn dữ liệu phân tích tự động</h2>
+      </div>
+      <dl class="divide-y divide-outline-variant/20">
+        <div class="grid grid-cols-1 sm:grid-cols-4 gap-space-xs px-space-lg py-space-sm">
+          <dt class="font-label-md text-on-surface-variant">Phương pháp</dt>
+          <dd class="font-body-sm text-on-surface sm:col-span-3">Đánh giá theo ngưỡng (<code class="bg-surface-container px-1 rounded">threshold_rule</code>)</dd>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-4 gap-space-xs px-space-lg py-space-sm">
+          <dt class="font-label-md text-on-surface-variant">Khoảng dữ liệu</dt>
+          <dd class="font-body-sm text-on-surface sm:col-span-3 font-data-tabular">{{ meta.window.0 }} → {{ meta.window.1 }}</dd>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-4 gap-space-xs px-space-lg py-space-sm">
+          <dt class="font-label-md text-on-surface-variant">Số phiếu sử dụng</dt>
+          <dd class="font-body-sm text-on-surface sm:col-span-3">
+            <strong>{{ meta.records_used }}</strong>
+            <span class="flex flex-wrap gap-1 mt-1">
+              {% for i in meta.record_ids|slice:":30" %}
+              <a href="{% url 'surveys:record_detail' i %}" class="px-1.5 py-0.5 rounded bg-surface-container text-primary font-label-sm hover:bg-primary-fixed">#{{ i }}</a>
+              {% endfor %}
+              {% if meta.records_used > 30 %}<span class="text-on-surface-variant font-label-sm">…</span>{% endif %}
+            </span>
+          </dd>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-4 gap-space-xs px-space-lg py-space-sm">
+          <dt class="font-label-md text-on-surface-variant">Chỉ tiêu / giá trị</dt>
+          <dd class="font-body-sm text-on-surface sm:col-span-3 font-data-tabular">{{ meta.metric }} = {{ meta.metric_value|floatformat:2 }}</dd>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-4 gap-space-xs px-space-lg py-space-sm">
+          <dt class="font-label-md text-on-surface-variant">Dữ liệu thời tiết</dt>
+          <dd class="font-body-sm text-on-surface sm:col-span-3">
+            {% if meta.weather_used %}Có, cập nhật lần cuối {{ meta.weather_last_update }}{% else %}Không có{% endif %}
+          </dd>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-4 gap-space-xs px-space-lg py-space-sm">
+          <dt class="font-label-md text-on-surface-variant">Thời điểm phân tích</dt>
+          <dd class="font-body-sm text-on-surface sm:col-span-3">{{ meta.data_as_of }}</dd>
+        </div>
+      </dl>
+    </div>
+    {% endif %}
+
+    {% if fc.status == 'confirmed' %}
+    <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+      <div class="px-space-lg py-space-sm bg-surface-container-low flex items-center justify-between gap-space-sm">
+        <div class="flex items-center gap-2">
+          <span class="msym text-[18px] text-primary">compare_arrows</span>
+          <h2 class="font-headline-sm text-headline-sm text-on-surface">Đối chiếu với diễn biến thực tế</h2>
+        </div>
+        {% if can_evaluate %}
+        <form method="post" action="{% url 'forecasts:action' fc.pk 'evaluate' %}">{% csrf_token %}
+          <button class="h-8 px-space-sm rounded-lg bg-primary text-white font-label-md inline-flex items-center gap-1">
+            <span class="msym text-[16px]">refresh</span>Cập nhật đối chiếu
+          </button>
+        </form>
+        {% endif %}
+      </div>
+      <div class="p-space-lg">
+        {% if fc.evaluated_at %}
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-space-sm mb-space-md">
+          <div class="bg-surface-container-low rounded-lg p-space-sm">
+            <div class="font-label-sm text-label-sm text-on-surface-variant uppercase">Tỷ lệ hại thực tế</div>
+            <div class="font-headline-lg text-headline-lg text-on-surface">{{ fc.actual_rate|floatformat:2|default:"—" }}%</div>
+          </div>
+          <div class="bg-surface-container-low rounded-lg p-space-sm">
+            <div class="font-label-sm text-label-sm text-on-surface-variant uppercase">Diện tích thực tế</div>
+            <div class="font-headline-lg text-headline-lg text-on-surface">{{ fc.actual_area|floatformat:2|default:"—" }} ha</div>
+          </div>
+          <div class="bg-surface-container-low rounded-lg p-space-sm">
+            <div class="font-label-sm text-label-sm text-on-surface-variant uppercase">Mức độ thực tế</div>
+            <div class="mt-1">
+              {% if fc.actual_level == 'very_high' %}<span class="px-2.5 py-0.5 rounded-full bg-tertiary-container text-white font-label-sm">Rất cao</span>
+              {% elif fc.actual_level == 'high' %}<span class="px-2.5 py-0.5 rounded-full bg-secondary-container text-white font-label-sm">Cao</span>
+              {% elif fc.actual_level == 'medium' %}<span class="px-2.5 py-0.5 rounded-full bg-secondary-fixed text-on-secondary-fixed font-label-sm">Trung bình</span>
+              {% elif fc.actual_level == 'low' %}<span class="px-2.5 py-0.5 rounded-full bg-primary-fixed text-on-primary-fixed font-label-sm">Thấp</span>
+              {% else %}<span class="font-body-sm text-on-surface-variant">—</span>{% endif %}
+            </div>
+          </div>
+          <div class="bg-surface-container-low rounded-lg p-space-sm">
+            <div class="font-label-sm text-label-sm text-on-surface-variant uppercase">Đối chiếu lúc</div>
+            <div class="font-body-sm text-on-surface">{{ fc.evaluated_at|vn_date }}</div>
+          </div>
+        </div>
+        <p class="font-body-md text-body-md text-on-surface font-medium">{{ fc.evaluation_note }}</p>
+        {% else %}
+        <p class="font-body-sm text-body-sm text-on-surface-variant">
+          Chưa đối chiếu. Bấm cập nhật khi đã có phiếu điều tra đã xác nhận trong thời gian dự báo.
+        </p>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="lg:col-span-4 flex flex-col gap-space-lg">
+    {% if can_submit or can_review %}
+    <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+      <div class="px-space-lg py-space-sm bg-surface-container-low flex items-center gap-2">
+        <span class="msym text-[18px] text-primary">approval</span>
+        <h2 class="font-headline-sm text-headline-sm text-on-surface">Quy trình xác nhận</h2>
+      </div>
+      <form method="post" class="p-space-lg flex flex-col gap-space-sm">
+        {% csrf_token %}
+        <div class="flex flex-col gap-1">
+          <label class="tw-label" for="note">Ý kiến</label>
+          <textarea class="tw-input" id="note" name="note" rows="3"></textarea>
+        </div>
+        {% if can_submit %}
+        <button class="h-10 rounded-xl bg-primary hover:bg-primary-container text-white font-label-lg inline-flex items-center justify-center gap-2" formaction="{% url 'forecasts:action' fc.pk 'submit' %}">
+          <span class="msym text-[18px]">send</span>Trình xác nhận
+        </button>
+        {% endif %}
+        {% if can_review %}
+        <button class="h-10 rounded-xl bg-primary-container hover:bg-primary text-white font-label-lg inline-flex items-center justify-center gap-2" formaction="{% url 'forecasts:action' fc.pk 'confirm' %}">
+          <span class="msym text-[18px]">verified</span>Xác nhận nhận định
+        </button>
+        <button class="h-10 rounded-xl bg-error-container text-on-error-container hover:bg-tertiary-container hover:text-white font-label-lg inline-flex items-center justify-center gap-2" formaction="{% url 'forecasts:action' fc.pk 'reject' %}">
+          <span class="msym text-[18px]">block</span>Không thông qua
+        </button>
+        {% endif %}
+      </form>
+    </div>
+    {% endif %}
+
+    <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+      <div class="px-space-lg py-space-sm bg-surface-container-low flex items-center gap-2">
+        <span class="msym text-[18px] text-primary">history</span>
+        <h2 class="font-headline-sm text-headline-sm text-on-surface">Lịch sử</h2>
+      </div>
+      <ul class="divide-y divide-outline-variant/20 max-h-80 overflow-y-auto">
+        {% for h in history %}
+        <li class="px-space-lg py-space-sm">
+          <p class="font-body-sm text-body-sm text-on-surface"><strong>{{ h.action }}</strong></p>
+          <p class="font-label-sm text-label-sm text-outline">{{ h.username|default:"hệ thống" }} · {{ h.created_at|vn_date }}</p>
+          {% if h.note %}<p class="font-label-sm text-label-sm text-on-surface-variant mt-0.5">{{ h.note }}</p>{% endif %}
+        </li>
+        {% empty %}
+        <li class="px-space-lg py-space-md text-center font-body-sm text-on-surface-variant">Chưa có.</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+</div>
+{% endblock %}

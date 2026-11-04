@@ -1,0 +1,21 @@
+{% load ui %}
+{% if page.has_other_pages %}
+<nav class="mt-space-lg flex items-center justify-center gap-space-xs" aria-label="Phân trang">
+  {% if page.has_previous %}
+  <a class="h-9 px-space-md rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface font-label-md inline-flex items-center gap-1"
+     href="?{% qs_without 'page' %}&page={{ page.previous_page_number }}">
+    <span class="msym text-[18px]">chevron_left</span>Trước
+  </a>
+  {% endif %}
+  <span class="h-9 px-space-md rounded-lg bg-primary text-white font-label-md inline-flex items-center">
+    Trang {{ page.number }} / {{ page.paginator.num_pages }}
+  </span>
+  <span class="font-label-md text-on-surface-variant px-2">({{ page.paginator.count }} bản ghi)</span>
+  {% if page.has_next %}
+  <a class="h-9 px-space-md rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface font-label-md inline-flex items-center gap-1"
+     href="?{% qs_without 'page' %}&page={{ page.next_page_number }}">
+    Sau<span class="msym text-[18px]">chevron_right</span>
+  </a>
+  {% endif %}
+</nav>
+{% endif %}

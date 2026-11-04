@@ -1,0 +1,118 @@
+{% extends "base_ui.html" %}
+{% load ui %}
+{% block title %}So sánh dữ liệu{% endblock %}
+
+{% block page_header %}
+<div class="pt-space-md pb-space-md">
+  <nav class="flex flex-wrap items-center gap-1 text-on-surface-variant font-label-md mb-space-xs">
+    <a href="{% url 'forecasts:analysis' %}" class="hover:text-primary">Phân tích diễn biến</a>
+    <span class="msym text-[14px] text-outline">chevron_right</span>
+    <span class="text-primary font-semibold">So sánh kỳ, địa bàn</span>
+  </nav>
+  <h1 class="font-display-sm text-display-sm text-on-surface tracking-tight">So sánh giữa các kỳ điều tra</h1>
+  <p class="font-body-md text-body-md text-on-surface-variant mt-space-2xs">Chỉ sử dụng phiếu điều tra đã được xác nhận.</p>
+</div>
+{% endblock %}
+
+{% block content %}
+<form class="bg-white rounded-xl shadow-sm p-space-md grid grid-cols-2 md:grid-cols-4 xl:grid-cols-8 gap-space-sm items-end mb-space-lg" method="get">
+  <div class="flex flex-col gap-1">
+    <label class="tw-label" for="a_from">Kỳ A từ</label>
+    <input class="tw-input" type="date" id="a_from" name="a_from" value="{{ p.a_from }}" required>
+  </div>
+  <div class="flex flex-col gap-1">
+    <label class="tw-label" for="a_to">Kỳ A đến</label>
+    <input class="tw-input" type="date" id="a_to" name="a_to" value="{{ p.a_to }}" required>
+  </div>
+  <div class="flex flex-col gap-1">
+    <label class="tw-label" for="b_from">Kỳ B từ</label>
+    <input class="tw-input" type="date" id="b_from" name="b_from" value="{{ p.b_from }}" required>
+  </div>
+  <div class="flex flex-col gap-1">
+    <label class="tw-label" for="b_to">Kỳ B đến</label>
+    <input class="tw-input" type="date" id="b_to" name="b_to" value="{{ p.b_to }}" required>
+  </div>
+  <div class="flex flex-col gap-1">
+    <label class="tw-label" for="dimension">So sánh theo</label>
+    <select class="tw-input" id="dimension" name="dimension">
+      {% for k, v in dims.items %}<option value="{{ k }}" {% if dim == k %}selected{% endif %}>{{ v.0 }}</option>{% endfor %}
+    </select>
+  </div>
+  <div class="flex flex-col gap-1">
+    <label class="tw-label" for="crop">Cây trồng</label>
+    <select class="tw-input" id="crop" name="crop">
+      <option value="">Tất cả</option>
+      {% for c in crops %}<option value="{{ c.pk }}" {% if p.crop == c.pk|stringformat:"s" %}selected{% endif %}>{{ c.name }}</option>{% endfor %}
+    </select>
+  </div>
+  <div class="flex flex-col gap-1">
+    <label class="tw-label" for="pest">Sinh vật</label>
+    <select class="tw-input" id="pest" name="pest">
+      <option value="">Tất cả</option>
+      {% for c in pests %}<option value="{{ c.pk }}" {% if p.pest == c.pk|stringformat:"s" %}selected{% endif %}>{{ c.name }}</option>{% endfor %}
+    </select>
+  </div>
+  <div class="flex flex-col gap-1">
+    <label class="tw-label" for="division">Địa bàn</label>
+    <select class="tw-input" id="division" name="division">
+      <option value="">Tất cả</option>
+      {% for c in divisions %}<option value="{{ c.pk }}" {% if p.division == c.pk|stringformat:"s" %}selected{% endif %}>{{ c.name }}</option>{% endfor %}
+    </select>
+  </div>
+  <button class="h-10 rounded-xl bg-primary text-white font-label-lg inline-flex items-center justify-center gap-1.5 col-span-2 md:col-span-1" type="submit">
+    <span class="msym text-[18px]">compare_arrows</span>So sánh
+  </button>
+</form>
+
+{% if result is not None %}
+<div class="bg-white rounded-xl shadow-sm overflow-hidden">
+  <div class="overflow-x-auto">
+    <table class="w-full text-left border-collapse">
+      <thead>
+        <tr class="bg-surface-container text-on-surface-variant font-label-sm text-label-sm uppercase tracking-wider">
+          <th rowspan="2" class="py-space-sm px-space-md align-bottom">{{ dims|get_item:dim|first }}</th>
+          <th colspan="3" class="py-space-xs px-space-md text-center border-l border-outline-variant/40 text-primary">Kỳ A</th>
+          <th colspan="3" class="py-space-xs px-space-md text-center border-l border-outline-variant/40 text-secondary">Kỳ B</th>
+          <th rowspan="2" class="py-space-sm px-space-md text-center align-bottom border-l border-outline-variant/40">Chênh lệch</th>
+        </tr>
+        <tr class="bg-surface-container-high text-on-surface-variant font-label-sm text-label-sm">
+          <th class="py-space-xs px-space-md text-right border-l border-outline-variant/40">Phiếu</th>
+          <th class="py-space-xs px-space-md text-right">Tỷ lệ hại (%)</th>
+          <th class="py-space-xs px-space-md text-right">DT hại (ha)</th>
+          <th class="py-space-xs px-space-md text-right border-l border-outline-variant/40">Phiếu</th>
+          <th class="py-space-xs px-space-md text-right">Tỷ lệ hại (%)</th>
+          <th class="py-space-xs px-space-md text-right">DT hại (ha)</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-outline-variant/30 font-body-sm">
+        {% for r in result %}
+        <tr class="hover:bg-surface-container-low">
+          <td class="py-space-sm px-space-md font-title-md text-title-md text-on-surface">{{ r.label }}</td>
+          <td class="py-space-sm px-space-md text-right font-data-tabular border-l border-outline-variant/20">{{ r.a_records }}</td>
+          <td class="py-space-sm px-space-md text-right font-data-tabular">{{ r.a_rate|floatformat:2|default:"—" }}</td>
+          <td class="py-space-sm px-space-md text-right font-data-tabular">{{ r.a_affected|floatformat:2|default:"—" }}</td>
+          <td class="py-space-sm px-space-md text-right font-data-tabular border-l border-outline-variant/20">{{ r.b_records }}</td>
+          <td class="py-space-sm px-space-md text-right font-data-tabular">{{ r.b_rate|floatformat:2|default:"—" }}</td>
+          <td class="py-space-sm px-space-md text-right font-data-tabular">{{ r.b_affected|floatformat:2|default:"—" }}</td>
+          <td class="py-space-sm px-space-md text-center border-l border-outline-variant/20">
+            {% if r.delta is None %}<span class="text-outline">—</span>
+            {% elif r.delta > 0 %}
+            <span class="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full bg-error-container text-on-error-container font-label-sm font-semibold">
+              <span class="msym text-[13px]">trending_up</span>+{{ r.delta|floatformat:2 }}
+            </span>
+            {% elif r.delta < 0 %}
+            <span class="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full bg-primary-fixed text-on-primary-fixed font-label-sm font-semibold">
+              <span class="msym text-[13px]">trending_down</span>{{ r.delta|floatformat:2 }}
+            </span>
+            {% else %}<span class="text-on-surface-variant font-label-sm">0</span>{% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="8" class="py-space-3xl text-center text-on-surface-variant">Không có dữ liệu đã xác nhận.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

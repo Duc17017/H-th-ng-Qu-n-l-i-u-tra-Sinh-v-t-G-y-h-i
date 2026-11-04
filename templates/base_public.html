@@ -1,0 +1,105 @@
+{% load static ui %}<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}{{ APP_NAME }}{% endblock %}</title>
+    <link rel="stylesheet" href="{% static 'css/app.css' %}">
+    <style>
+        html, body { margin: 0; padding: 0; }
+        .msym { font-family: 'Material Symbols Outlined'; font-weight: normal; font-style: normal;
+                line-height: 1; letter-spacing: normal; text-transform: none; display: inline-block;
+                white-space: nowrap; direction: ltr; -webkit-font-feature-settings: 'liga';
+                -webkit-font-smoothing: antialiased; }
+        .prose-vn p { margin-bottom: .75rem; line-height: 1.7; }
+        .prose-vn h2 { font-size: 18px; font-weight: 600; margin: 1.25rem 0 .5rem; }
+        .prose-vn ul { list-style: disc; padding-left: 1.25rem; margin-bottom: .75rem; }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+<body class="bg-surface font-sans text-on-surface antialiased">
+
+<header class="sticky top-0 z-40 bg-surface/90 backdrop-blur-xl border-b border-outline-variant/30">
+    <div class="max-w-7xl mx-auto px-space-xl">
+        <div class="h-16 flex items-center justify-between gap-space-lg">
+            <a href="{% url 'cms:home' %}" class="flex items-center gap-space-sm shrink-0">
+                <div class="w-9 h-9 rounded-xl bg-primary flex items-center justify-center">
+                    <span class="msym text-white text-[22px]">local_florist</span>
+                </div>
+                <div class="flex flex-col">
+                    <span class="font-headline-sm text-headline-sm text-primary tracking-tight">AgriGov TT&amp;BVTV</span>
+                    <span class="font-label-sm text-label-sm text-on-surface-variant uppercase">Cổng thông tin công cộng</span>
+                </div>
+            </a>
+
+            <nav class="hidden lg:flex items-center gap-space-lg">
+                <a href="{% url 'cms:home' %}" class="font-label-lg text-label-lg text-on-surface-variant hover:text-primary">Trang chủ</a>
+                <a href="{% url 'cms:post_list' %}" class="font-label-lg text-label-lg text-on-surface-variant hover:text-primary">Tin tức</a>
+                <a href="{% url 'cms:post_list' %}?type=bulletin" class="font-label-lg text-label-lg text-on-surface-variant hover:text-primary">Bản tin dự báo</a>
+                <a href="{% url 'cms:post_list' %}?type=guide" class="font-label-lg text-label-lg text-on-surface-variant hover:text-primary">Hướng dẫn kỹ thuật</a>
+            </nav>
+
+            <div class="flex items-center gap-space-sm shrink-0">
+                {% if user.is_authenticated %}
+                <a href="{{ home_url }}" class="h-10 px-space-md rounded-xl bg-primary hover:bg-primary-container text-white font-label-lg inline-flex items-center gap-1.5">
+                    <span class="msym text-[18px]">dashboard</span>Vào hệ thống
+                </a>
+                {% else %}
+                <a href="{% url 'accounts:login' %}" class="h-10 px-space-md rounded-xl bg-primary hover:bg-primary-container text-white font-label-lg inline-flex items-center gap-1.5">
+                    <span class="msym text-[18px]">login</span>Đăng nhập
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</header>
+
+<main class="max-w-7xl mx-auto px-space-xl py-space-xl min-h-screen">
+    {% if messages %}
+    <div class="flex flex-col gap-space-xs mb-space-lg">
+        {% for msg in messages %}
+        <div class="px-space-md py-space-sm rounded-xl bg-surface-container text-on-surface font-body-sm">{{ msg }}</div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    {% block content %}{% endblock %}
+</main>
+
+<footer class="border-t border-outline-variant/30 mt-space-3xl">
+    <div class="max-w-7xl mx-auto px-space-xl py-space-xl grid grid-cols-1 md:grid-cols-3 gap-space-lg">
+        <div>
+            <div class="flex items-center gap-space-sm mb-space-sm">
+                <div class="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
+                    <span class="msym text-white text-[18px]">local_florist</span>
+                </div>
+                <span class="font-title-md text-title-md text-on-surface">AgriGov TT&amp;BVTV</span>
+            </div>
+            <p class="font-body-sm text-body-sm text-on-surface-variant">
+                Hệ thống quản lý điều tra sinh vật gây hại — công cụ hỗ trợ phân tích;
+                kết luận chuyên môn thuộc cơ quan, cán bộ có thẩm quyền.
+            </p>
+        </div>
+        <div>
+            <h3 class="font-label-sm text-label-sm text-outline uppercase mb-space-sm">Liên kết</h3>
+            <ul class="flex flex-col gap-1">
+                <li><a href="{% url 'cms:post_list' %}" class="font-body-sm text-body-sm text-on-surface-variant hover:text-primary">Tin tức &amp; sự kiện</a></li>
+                <li><a href="{% url 'cms:post_list' %}?type=bulletin" class="font-body-sm text-body-sm text-on-surface-variant hover:text-primary">Bản tin dự tính dự báo</a></li>
+                <li><a href="{% url 'cms:post_list' %}?type=guide" class="font-body-sm text-body-sm text-on-surface-variant hover:text-primary">Hướng dẫn kỹ thuật</a></li>
+            </ul>
+        </div>
+        <div>
+            <h3 class="font-label-sm text-label-sm text-outline uppercase mb-space-sm">Cơ quan chủ quản</h3>
+            <p class="font-body-sm text-body-sm text-on-surface-variant">
+                Chi cục Trồng trọt và Bảo vệ thực vật<br>
+                Sở Nông nghiệp và Phát triển nông thôn
+            </p>
+        </div>
+    </div>
+    <div class="border-t border-outline-variant/30 py-space-md text-center">
+        <span class="font-label-sm text-label-sm text-outline">© {{ current_season.start_date|date:"Y"|default:"2026" }} AgriGov Platform · Phiên bản 4.2.0</span>
+    </div>
+</footer>
+
+{% block extra_js %}{% endblock %}
+</body>
+</html>

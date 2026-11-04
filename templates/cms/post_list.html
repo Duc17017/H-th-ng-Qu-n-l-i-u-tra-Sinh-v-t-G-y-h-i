@@ -1,0 +1,75 @@
+{% extends "base_public.html" %}
+{% load ui %}
+{% block title %}Tin tức và bản tin chuyên ngành{% endblock %}
+
+{% block content %}
+<div class="flex flex-wrap items-end justify-between gap-space-md mb-space-lg">
+    <div>
+        <nav class="flex items-center gap-1 text-on-surface-variant font-label-md mb-space-xs">
+            <a href="{% url 'cms:home' %}" class="hover:text-primary">Trang chủ</a>
+            <span class="msym text-[14px] text-outline">chevron_right</span>
+            <span class="text-primary font-semibold">Tin tức &amp; bản tin</span>
+        </nav>
+        <h1 class="font-display-sm text-display-sm text-on-surface tracking-tight">Tin tức, bản tin chuyên ngành</h1>
+    </div>
+    <span class="font-label-md text-on-surface-variant">{{ page.paginator.count }} bài viết</span>
+</div>
+
+<form class="bg-white rounded-xl shadow-sm p-space-md mb-space-lg grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-space-sm" method="get" role="search">
+    <div class="flex flex-col gap-1 lg:col-span-2">
+        <label class="tw-label" for="q">Từ khóa</label>
+        <input class="tw-input" id="q" type="search" name="q" value="{{ q }}" placeholder="Tiêu đề, nội dung...">
+    </div>
+    <div class="flex flex-col gap-1">
+        <label class="tw-label" for="type">Loại bài</label>
+        <select class="tw-input" id="type" name="type">
+            <option value="">Tất cả</option>
+            {% for k, v in types %}<option value="{{ k }}" {% if t == k %}selected{% endif %}>{{ v }}</option>{% endfor %}
+        </select>
+    </div>
+    <div class="flex flex-col gap-1">
+        <label class="tw-label" for="cat">Chuyên mục</label>
+        <select class="tw-input" id="cat" name="cat">
+            <option value="">Tất cả</option>
+            {% for cat in categories %}<option value="{{ cat.slug }}" {% if request.GET.cat == cat.slug %}selected{% endif %}>{{ cat.name }}</option>{% endfor %}
+        </select>
+    </div>
+    <div class="flex items-end gap-space-xs">
+        <button class="h-10 px-space-md rounded-xl bg-primary text-white font-label-lg flex-1" type="submit">Tìm</button>
+        <a class="h-10 px-space-md rounded-xl bg-surface-container text-on-surface font-label-lg inline-flex items-center" href="{% url 'cms:post_list' %}">Xóa</a>
+    </div>
+</form>
+
+<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-space-md">
+    {% for p in page %}
+    <a href="{% url 'cms:post_public' p.slug %}" class="group bg-white rounded-xl shadow-sm overflow-hidden flex flex-col hover:shadow-md transition-shadow">
+        {% if p.cover %}
+        <img src="{{ p.cover.url }}" alt="{{ p.title }}" loading="lazy" class="h-40 w-full object-cover">
+        {% else %}
+        <div class="h-40 bg-surface-container flex items-center justify-center">
+            <span class="msym text-[44px] text-outline/50">article</span>
+        </div>
+        {% endif %}
+        <div class="p-space-md flex flex-col gap-space-xs flex-1">
+            <div class="flex items-center gap-space-xs">
+                <span class="px-2 py-0.5 rounded-full bg-primary-fixed text-on-primary-fixed font-label-sm">{{ p.get_post_type_display }}</span>
+                {% if p.category %}<span class="font-label-sm text-label-sm text-outline">{{ p.category.name }}</span>{% endif %}
+            </div>
+            <h2 class="font-headline-sm text-headline-sm text-on-surface group-hover:text-primary transition-colors line-clamp-2">{{ p.title }}</h2>
+            <p class="font-body-sm text-body-sm text-on-surface-variant line-clamp-3">{{ p.summary|default:p.content|truncatechars:150 }}</p>
+            <div class="mt-auto pt-space-xs flex items-center justify-between font-label-sm text-label-sm text-outline">
+                <span>{{ p.published_at|vn_date }}</span>
+                <span class="inline-flex items-center gap-1"><span class="msym text-[14px]">visibility</span>{{ p.views }}</span>
+            </div>
+        </div>
+    </a>
+    {% empty %}
+    <div class="col-span-full bg-white rounded-xl shadow-sm p-space-3xl text-center text-on-surface-variant font-body-md">
+        <span class="msym text-[44px] block opacity-30 mb-2">search_off</span>
+        Không tìm thấy bài viết phù hợp.
+    </div>
+    {% endfor %}
+</div>
+
+{% include "partials/pagination.html" %}
+{% endblock %}

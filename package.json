@@ -1,0 +1,13 @@
+{
+  "name": "gonstack-ui",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Build Tailwind CSS tĩnh cho hệ thống AgriGov TT&BVTV",
+  "scripts": {
+    "build": "tailwindcss -i ./static/css/input.css -o ./static/css/app.css --minify",
+    "watch": "tailwindcss -i ./static/css/input.css -o ./static/css/app.css --watch"
+  },
+  "devDependencies": {
+    "tailwindcss": "^3.4.17"
+  }
+}

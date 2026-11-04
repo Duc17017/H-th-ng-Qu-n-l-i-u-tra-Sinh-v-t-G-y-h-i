@@ -1,0 +1,254 @@
+{% extends "base_ui.html" %}
+{% load ui %}
+{% block title %}Quản lý Danh mục Biểu mẫu & Tiêu chuẩn QCVN{% endblock %}
+{% block content %}
+<div class="flex flex-col w-full px-gutter-desktop py-space-xl gap-space-xl">
+  <div class="flex flex-col gap-space-md">
+    <nav class="flex items-center gap-space-xs text-on-surface-variant font-label-md text-label-md">
+      <span class="hover:text-primary cursor-pointer">Hệ thống</span>
+      <span class="material-symbols-outlined text-label-sm">chevron_right</span>
+      <span class="hover:text-primary cursor-pointer">Danh mục &amp; Chuẩn hóa</span>
+      <span class="material-symbols-outlined text-label-sm">chevron_right</span>
+      <span class="text-primary font-semibold">Quản lý Biểu mẫu &amp; Tiêu chuẩn Kỹ thuật QCVN</span>
+    </nav>
+    <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-space-lg">
+      <div class="flex flex-col gap-space-2xs max-w-4xl">
+        <h1 class="font-display-sm text-display-sm text-on-surface tracking-tight">Quản lý Danh mục Biểu mẫu Điều tra &amp; Quy chuẩn Kỹ thuật QCVN / TCVN</h1>
+        <p class="font-body-md text-body-md text-on-surface-variant">Chuẩn hóa các trường thông tin, chỉ tiêu số lượng - mật độ, công thức tính toán logic và phiên bản biểu mẫu điện tử.</p>
+      </div>
+      <div class="flex items-center gap-space-sm shrink-0 flex-wrap">
+        {% if 'create' in perms_map.plans %}<a href="{% url 'surveys:templates_create' %}" class="inline-flex items-center gap-space-xs px-4 py-2 rounded-lg bg-primary text-on-primary font-label-md text-label-md"><span class="material-symbols-outlined text-title-md">add_circle</span>Tạo Biểu mẫu mới</a>{% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-space-md">
+    <div class="bg-surface-container-lowest p-space-lg rounded-xl shadow-sm">
+      <div class="flex items-center justify-between gap-space-sm mb-space-sm">
+        <span class="font-label-md text-label-md text-on-surface-variant uppercase font-semibold">Tổng số Biểu mẫu</span>
+        <div class="p-1.5 rounded-lg bg-surface-container-low text-primary"><span class="material-symbols-outlined">description</span></div>
+      </div>
+      <span class="font-display-lg text-display-lg font-bold text-on-surface">{{ templates|length }}</span>
+      <div class="mt-space-md pt-space-xs flex items-center justify-between text-on-surface-variant font-label-sm">
+        <span>Định kỳ và chuyên đề</span>
+        <span class="text-primary font-semibold">100% Số hóa</span>
+      </div>
+    </div>
+    <div class="bg-surface-container-lowest p-space-lg rounded-xl shadow-sm">
+      <div class="flex items-center justify-between gap-space-sm mb-space-sm">
+        <span class="font-label-md text-label-md text-on-surface-variant uppercase font-semibold">Quy chuẩn áp dụng</span>
+        <div class="p-1.5 rounded-lg bg-surface-container-low text-secondary"><span class="material-symbols-outlined">verified_user</span></div>
+      </div>
+      <span class="font-display-lg text-display-lg font-bold text-on-surface">06</span>
+      <div class="mt-space-md text-label-sm text-on-surface-variant truncate">QCVN 01-38:2010 &amp; TCVN</div>
+    </div>
+    <div class="bg-surface-container-lowest p-space-lg rounded-xl shadow-sm">
+      <div class="flex items-center justify-between gap-space-sm mb-space-sm">
+        <span class="font-label-md text-label-md text-on-surface-variant uppercase font-semibold">Chỉ tiêu &amp; Trường dữ liệu</span>
+        <div class="p-1.5 rounded-lg bg-surface-container-low text-primary"><span class="material-symbols-outlined">dataset</span></div>
+      </div>
+      <span class="font-display-lg text-display-lg font-bold text-on-surface">86</span>
+      <div class="mt-space-md text-label-sm text-on-surface-variant">Định danh &amp; ràng buộc</div>
+    </div>
+    <div class="bg-surface-container-lowest p-space-lg rounded-xl shadow-sm">
+      <div class="flex items-center justify-between gap-space-sm mb-space-sm">
+        <span class="font-label-md text-label-md text-on-surface-variant uppercase font-semibold">Phiên bản hiện tại</span>
+        <div class="p-1.5 rounded-lg bg-surface-container-low text-on-surface"><span class="material-symbols-outlined">fact_check</span></div>
+      </div>
+      <span class="font-headline-lg text-headline-lg font-bold text-primary">V2025.1.4</span>
+      <div class="mt-space-md text-label-sm text-on-surface-variant">Từ 01/01/2025</div>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-space-lg">
+    <!-- DANH SÁCH BIỂU MẪU -->
+    <section class="lg:col-span-5 flex flex-col gap-space-md bg-surface-container-lowest p-space-lg rounded-xl shadow-sm">
+      <div class="flex items-center justify-between gap-space-xs">
+        <h2 class="font-headline-sm text-headline-sm text-on-surface">Danh sách Biểu mẫu</h2>
+      </div>
+      <div class="relative">
+        <span class="material-symbols-outlined absolute left-3 top-2.5 text-on-surface-variant">search</span>
+        <form method="get" class="flex">
+          <input type="hidden" name="template_id" value="{{ sel_template.pk }}">
+          <input name="q" value="{{ q }}" type="text" placeholder="Tìm mã, tên biểu mẫu..." class="w-full pl-10 pr-4 py-2 rounded-lg bg-surface-container-low text-on-surface focus:outline-none focus:ring-1 focus:ring-primary">
+        </form>
+      </div>
+      <div class="flex flex-col gap-space-sm max-h-96 overflow-y-auto">
+        {% for t in templates %}
+        <a href="?template_id={{ t.pk }}" class="p-space-lg rounded-xl {% if t.pk == sel_template.pk %}bg-surface-container-low border-l-4 border-l-primary{% else %}bg-surface-container-lowest shadow-sm hover:shadow-md{% endif %} transition-all cursor-pointer">
+          <div class="flex items-start justify-between gap-space-sm">
+            <div class="flex items-center gap-space-xs">
+              <span class="px-2 py-0.5 rounded font-label-sm text-label-sm bg-{% if t.is_active %}primary{% else %}surface-container{% endif %}-container text-{% if t.is_active %}on-primary{% else %}on-surface-variant{% endif %}">{{ t.code }}</span>
+              {% if t.is_active %}<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-surface-container-low text-primary font-label-sm text-label-sm"><span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>Áp dụng</span>{% endif %}
+            </div>
+            <span class="font-data-tabular text-data-tabular text-on-surface-variant">v{{ t.version }}</span>
+          </div>
+          <h3 class="font-headline-sm text-headline-sm text-on-surface font-bold mt-space-xs">{{ t.name }}</h3>
+          <p class="font-body-sm text-body-sm text-on-surface-variant mt-0.5">{{ t.description|truncatewords:15 }}</p>
+        </a>
+        {% endfor %}
+      </div>
+    </section>
+
+    <!-- CHI TIẾT BIỂU MẪU -->
+    {% if sel_template %}
+    <section class="lg:col-span-7 flex flex-col gap-space-lg bg-surface-container-lowest p-space-lg rounded-xl shadow-sm">
+      <div class="flex items-center gap-space-md">
+        <div class="w-12 h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center"><span class="material-symbols-outlined text-display-sm">assignment_turned_in</span></div>
+        <div class="flex flex-col">
+          <span class="font-data-tabular text-data-tabular font-bold text-primary">{{ sel_template.code }}</span>
+          <h2 class="font-headline-lg text-headline-lg text-on-surface font-bold">{{ sel_template.name }}</h2>
+        </div>
+      </div>
+
+      <div class="p-space-md rounded-xl bg-surface-container-low">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-space-md">
+          <div class="flex flex-col">
+            <span class="font-label-sm text-label-sm text-on-surface-variant uppercase">Cây trồng</span>
+            <span class="font-title-md text-title-md text-on-surface font-semibold mt-0.5">{{ sel_template.crop|default:"Chung" }}</span>
+          </div>
+          <div class="flex flex-col">
+            <span class="font-label-sm text-label-sm text-on-surface-variant uppercase">Phương pháp điều tra</span>
+            <span class="font-title-md text-title-md text-on-surface font-semibold mt-0.5">{{ sel_template.method|default:"Chung" }}</span>
+          </div>
+          <div class="flex flex-col">
+            <span class="font-label-sm text-label-sm text-on-surface-variant uppercase">Đối tượng hại</span>
+            <span class="font-title-md text-title-md text-on-surface font-semibold mt-0.5">{{ sel_template.pest|default:"Chung" }}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex flex-col gap-space-md">
+        <div class="flex items-center justify-between">
+          <span class="font-headline-sm text-headline-sm text-on-surface font-bold">Cấu trúc Trường Dữ liệu</span>
+          <div class="flex items-center gap-space-xs">
+            {% if 'edit' in perms_map.plans %}<a href="{% url 'surveys:template_edit_struct' sel_template.pk %}" class="text-primary font-label-md text-label-md font-semibold flex items-center gap-1"><span class="material-symbols-outlined">edit</span>Chỉnh sửa</a>{% endif %}
+            <button onclick="document.getElementById('rule-engine-modal').classList.remove('hidden')" class="text-primary font-label-md text-label-md font-semibold flex items-center gap-1" title="Cấu hình Rule Engine"><span class="material-symbols-outlined">settings_suggest</span>Rule Engine</button>
+          </div>
+        </div>
+        <div class="overflow-x-auto rounded-lg">
+          <table class="w-full text-left font-body-sm bg-surface-container-lowest">
+            <thead class="bg-surface-container-low text-on-surface-variant font-label-sm uppercase">
+              <tr><th class="py-2.5 px-3">Nhãn trường</th><th class="py-2.5 px-3">Kiểu</th><th class="py-2.5 px-3">Bắt buộc</th><th class="py-2.5 px-3">Phạm vi</th></tr>
+            </thead>
+            <tbody class="divide-y divide-surface-container-low">
+              {% for field in fields %}
+              <tr class="hover:bg-surface-container-low/50">
+                <td class="py-3 px-3 font-semibold">{{ field.label }}</td>
+                <td class="py-3 px-3"><span class="px-2 py-0.5 rounded bg-surface-container text-on-surface text-label-sm">{{ field.get_field_type_display }}</span></td>
+                <td class="py-3 px-3">{% if field.required %}<span class="text-tertiary">Bắt buộc</span>{% else %}<span class="text-on-surface-variant">Tùy chọn</span>{% endif %}</td>
+                <td class="py-3 px-3 text-on-surface-variant">{% if field.min_value %}{{ field.min_value }}{% endif %}{% if field.max_value %} - {{ field.max_value }}{% endif %}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+    {% endif %}
+  </div>
+</div>
+
+<!-- MODAL: Rule Engine Configuration (Mockup 7) -->
+<div class="fixed inset-0 z-50 flex justify-end bg-inverse-surface/40 backdrop-blur-sm transition-opacity duration-300 hidden" id="rule-engine-modal">
+  <div class="w-full max-w-4xl bg-surface-container-lowest h-full shadow-2xl flex flex-col justify-between overflow-hidden border-l border-outline-variant/30">
+    <div class="px-space-xl py-space-lg bg-surface-container-low border-b border-outline-variant/30 flex items-start justify-between gap-space-md shrink-0">
+      <div class="flex items-start gap-space-md">
+        <div class="w-12 h-12 rounded-xl bg-primary-container text-on-primary-container flex items-center justify-center shrink-0 shadow-sm"><span class="material-symbols-outlined text-display-sm">settings_suggest</span></div>
+        <div class="flex flex-col">
+          <h2 class="font-headline-md text-headline-md text-on-surface font-bold">Cấu hình Rule Engine: Quy tắc Xác thực Dữ liệu</h2>
+          <p class="font-body-sm text-body-sm text-on-surface-variant">Các quy tắc logic kiểm đối GPS, mật độ dịch hại và ngưỡng cảnh báo sinh học (QCVN 01-38:2010)</p>
+        </div>
+      </div>
+      <button class="p-1.5 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-colors shrink-0" onclick="document.getElementById('rule-engine-modal').classList.add('hidden')" title="Đóng"><span class="material-symbols-outlined text-headline-sm">close</span></button>
+    </div>
+    
+    <div class="flex-1 overflow-y-auto p-space-xl flex flex-col gap-space-xl">
+      <div class="p-space-md rounded-xl bg-primary/10 border border-primary/20 flex items-center gap-space-md">
+        <span class="material-symbols-outlined text-primary text-headline-lg">verified</span>
+        <div class="flex flex-col">
+          <span class="font-label-md text-label-md text-on-surface font-semibold">Phạm vi hiệu lực</span>
+          <span class="font-body-sm text-body-sm text-on-surface-variant">Quyết định 142/QĐ-SNNPTNT • Áp dụng cho 14 Trạm BVTV • Ký duyệt: Chi cục trưởng</span>
+        </div>
+      </div>
+
+      <!-- Nhóm A: Quy tắc GPS -->
+      <div class="flex flex-col gap-space-md">
+        <div class="flex items-center gap-space-sm">
+          <span class="w-8 h-8 rounded-lg bg-primary-container text-on-primary flex items-center justify-center font-bold text-label-md">A</span>
+          <div>
+            <h3 class="font-headline-sm text-headline-sm text-on-surface font-bold">Phân nhóm Quy tắc GPS &amp; Đối chiếu Không gian Thực địa</h3>
+            <p class="font-body-sm text-body-sm text-on-surface-variant">Ngăn chặn gian lận vị trí, khai báo khống ngoài địa bàn</p>
+          </div>
+        </div>
+        <div class="flex flex-col gap-space-sm">
+          <div class="p-space-md rounded-xl bg-surface-container-lowest border border-outline-variant/30 shadow-sm flex flex-col gap-space-xs">
+            <div class="flex items-start justify-between">
+              <div class="flex items-center gap-space-xs">
+                <span class="px-2 py-0.5 rounded bg-surface-container text-primary font-mono text-label-sm font-bold">GPS-01</span>
+                <span class="font-title-md text-title-md text-on-surface font-bold">Bán kính sai số định vị tối đa ≤ 10.0m</span>
+              </div>
+              <span class="px-2 py-0.5 rounded bg-secondary-fixed text-on-secondary-fixed text-label-sm font-semibold">Cảnh báo &amp; Yêu cầu đo lại</span>
+            </div>
+            <p class="font-body-sm text-body-sm text-on-surface-variant">Nếu bán kính chính xác GPS &gt; 10m, ứng dụng hiện thông báo vàng buộc Kỹ thuật viên di chuyển vùng thoáng để chụp lại.</p>
+          </div>
+          <div class="p-space-md rounded-xl bg-surface-container-lowest border border-outline-variant/30 shadow-sm flex flex-col gap-space-xs">
+            <div class="flex items-start justify-between">
+              <div class="flex items-center gap-space-xs">
+                <span class="px-2 py-0.5 rounded bg-surface-container text-primary font-mono text-label-sm font-bold">GPS-02</span>
+                <span class="font-title-md text-title-md text-on-surface font-bold">Geofencing: Tọa độ phải nằm trong ranh giới hành chính</span>
+              </div>
+              <span class="px-2 py-0.5 rounded bg-error-container text-tertiary text-label-sm font-bold">Khóa nộp hồ sơ</span>
+            </div>
+            <p class="font-body-sm text-body-sm text-on-surface-variant">Điểm khảo sát phải 100% nằm trong polygon GIS của xã/huyện được phân công. Dung sai biên: 50m.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Nhóm B: Quy tắc Mật độ & Ngưỡng -->
+      <div class="flex flex-col gap-space-md">
+        <div class="flex items-center gap-space-sm">
+          <span class="w-8 h-8 rounded-lg bg-primary-container text-on-primary flex items-center justify-center font-bold text-label-md">B</span>
+          <div>
+            <h3 class="font-headline-sm text-headline-sm text-on-surface font-bold">Phân nhóm Quy tắc Mật độ &amp; Ngưỡng Sinh học QCVN</h3>
+            <p class="font-body-sm text-body-sm text-on-surface-variant">Ràng buộc toán học và kích hoạt quy trình dập dịch</p>
+          </div>
+        </div>
+        <div class="flex flex-col gap-space-sm">
+          <div class="p-space-md rounded-xl bg-surface-container-lowest border border-outline-variant/30 shadow-sm flex flex-col gap-space-xs">
+            <div class="flex items-start justify-between">
+              <div class="flex items-center gap-space-xs">
+                <span class="px-2 py-0.5 rounded bg-surface-container text-primary font-mono text-label-sm font-bold">DENS-01</span>
+                <span class="font-title-md text-title-md text-on-surface font-bold">Giới hạn toán học: Mật độ ≤ 10.000 con/m²; Tỷ lệ [0-100%]</span>
+              </div>
+              <span class="px-2 py-0.5 rounded bg-surface-container-high text-on-surface-variant text-label-sm font-semibold">Validation tự động</span>
+            </div>
+            <p class="font-body-sm text-body-sm text-on-surface-variant">Ngăn chặn nhập liệu dư số; chỉ chấp nhận cấp bệnh IRRI từ 1-9.</p>
+          </div>
+          <div class="p-space-md rounded-xl bg-surface-container-lowest border border-outline-variant/30 shadow-sm flex flex-col gap-space-xs">
+            <div class="flex items-start justify-between">
+              <div class="flex items-center gap-space-xs">
+                <span class="px-2 py-0.5 rounded bg-surface-container text-primary font-mono text-label-sm font-bold">DENS-04</span>
+                <span class="font-title-md text-title-md text-on-surface font-bold">Kích hoạt Cảnh báo Bùng dịch (Mật độ rầy ≥ 3.000 con/m²)</span>
+              </div>
+              <span class="px-2 py-0.5 rounded bg-tertiary text-on-tertiary text-label-sm font-bold animate-pulse">Báo động đỏ</span>
+            </div>
+            <p class="font-body-sm text-body-sm text-on-surface-variant">Tự động sinh hồ sơ nguy cơ bùng dịch và gửi SMS/Zalo tức thời đến Trưởng trạm.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="px-space-xl py-space-md bg-surface-container-low border-t border-outline-variant/30 flex items-center justify-between gap-space-md shrink-0">
+      <div class="flex items-center gap-space-xs text-on-surface-variant font-label-sm">
+        <span class="material-symbols-outlined text-title-md">history</span>
+        <span>Cập nhật: 15/01/2025</span>
+      </div>
+      <div class="flex items-center gap-space-xs">
+        <button class="px-4 py-2 rounded-lg bg-surface-container-lowest text-on-surface hover:bg-surface-container font-label-md font-semibold transition-colors" onclick="document.getElementById('rule-engine-modal').classList.add('hidden')">Đóng</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

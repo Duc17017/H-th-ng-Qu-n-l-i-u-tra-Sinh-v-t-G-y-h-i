@@ -1,0 +1,199 @@
+{% extends "base_public.html" %}
+{% load ui %}
+{% block title %}Cổng thông tin nông nghiệp{% endblock %}
+
+{% block content %}
+<!-- HERO -->
+<section class="bg-white rounded-2xl shadow-sm overflow-hidden mb-space-xl">
+    <div class="grid grid-cols-1 lg:grid-cols-12">
+        <div class="lg:col-span-7 p-space-2xl flex flex-col justify-center gap-space-md">
+            <span class="inline-flex w-fit items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary-fixed text-on-primary-fixed font-label-sm uppercase tracking-wide">
+                <span class="msym text-[14px]">verified</span>Cổng thông tin chính thức
+            </span>
+            <h1 class="font-display-lg text-display-lg text-on-surface tracking-tight">
+                Hệ thống quản lý điều tra sinh vật gây hại
+            </h1>
+            <p class="font-body-lg text-body-lg text-on-surface-variant max-w-2xl">
+                Thông tin trồng trọt và bảo vệ thực vật: tin tức, bản tin dự tính dự báo, cảnh báo dịch hại
+                và hướng dẫn phòng trừ theo Quy chuẩn kỹ thuật quốc gia.
+            </p>
+            <form class="flex flex-col sm:flex-row gap-space-sm max-w-2xl" action="{% url 'cms:post_list' %}" method="get" role="search">
+                <div class="flex items-center flex-1 h-11 px-space-md rounded-xl bg-surface-container-low">
+                    <span class="msym text-[20px] text-outline mr-space-sm">search</span>
+                    <input class="flex-1 bg-transparent border-none outline-none font-body-md text-on-surface"
+                           id="hq" name="q" placeholder="Tìm tin tức, bản tin, hướng dẫn kỹ thuật" aria-label="Tìm kiếm">
+                </div>
+                <button class="h-11 px-space-lg rounded-xl bg-primary hover:bg-primary-container text-white font-label-lg shrink-0" type="submit">Tìm kiếm</button>
+            </form>
+        </div>
+        <div class="lg:col-span-5 bg-primary-container p-space-2xl flex flex-col justify-center gap-space-md text-white">
+            <span class="font-label-sm uppercase tracking-wider text-primary-fixed">Mùa vụ hiện hành</span>
+            {% if current_season %}
+            <div>
+                <div class="font-display-sm text-display-sm font-bold">{{ current_season.name }}</div>
+                <div class="font-body-sm text-body-sm text-white/80 mt-space-2xs">
+                    {{ current_season.start_date|vn_date }} — {{ current_season.end_date|vn_date }}
+                </div>
+            </div>
+            {% else %}
+            <div class="font-body-sm text-white/80">Chưa cấu hình mùa vụ.</div>
+            {% endif %}
+            <div class="grid grid-cols-2 gap-space-sm pt-space-sm border-t border-white/20">
+                <div>
+                    <div class="font-label-sm text-white/70 uppercase">Cảnh báo hiệu lực</div>
+                    <div class="font-display-sm text-display-sm font-bold">{{ alerts|length }}</div>
+                </div>
+                <div>
+                    <div class="font-label-sm text-white/70 uppercase">Bản tin dự báo</div>
+                    <div class="font-display-sm text-display-sm font-bold">{{ bulletins|length }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ALERTS TICKER -->
+{% if alerts %}
+<section class="mb-space-xl" aria-labelledby="h-alert">
+    <div class="flex items-center gap-space-sm mb-space-md">
+        <span class="msym text-tertiary text-[22px]">campaign</span>
+        <h2 id="h-alert" class="font-headline-lg text-headline-lg text-on-surface">Cảnh báo đang có hiệu lực</h2>
+        <span class="px-2 py-0.5 rounded-full bg-tertiary-fixed text-tertiary font-label-sm font-bold">{{ alerts|length }}</span>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-space-md">
+        {% for a in alerts %}
+        <article class="bg-white rounded-xl shadow-sm p-space-lg flex flex-col gap-space-sm border-l-4
+            {% if a.risk_level == 'very_high' %}border-tertiary{% elif a.risk_level == 'high' %}border-secondary-container{% elif a.risk_level == 'medium' %}border-secondary{% else %}border-primary{% endif %}">
+            <div class="flex items-center justify-between gap-space-sm">
+                {{ a|risk_badge }}
+                <span class="font-label-sm text-label-sm text-outline">{{ a.code }}</span>
+            </div>
+            <h3 class="font-headline-sm text-headline-sm text-on-surface">{{ a.title }}</h3>
+            <p class="font-body-sm text-body-sm text-on-surface-variant flex items-center gap-1.5">
+                <span class="msym text-[16px]">bug_report</span>{{ a.pest.name }}
+                <span class="text-outline">·</span>
+                <span class="msym text-[16px]">agriculture</span>{{ a.crop.name }}
+            </p>
+            <p class="font-body-sm text-body-sm text-on-surface">{{ a.guidance|truncatechars:150 }}</p>
+            <div class="flex items-center justify-between pt-space-xs border-t border-outline-variant/30 font-label-sm text-label-sm text-on-surface-variant">
+                <span class="inline-flex items-center gap-1"><span class="msym text-[14px]">event</span>Đến {{ a.valid_to|vn_date }}</span>
+                {% if user.is_authenticated %}
+                <a href="{% url 'alerts:alert_detail' a.pk %}" class="text-primary hover:underline">Chi tiết →</a>
+                {% endif %}
+            </div>
+        </article>
+        {% endfor %}
+    </div>
+</section>
+{% endif %}
+
+<!-- MAIN 2-COL -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-space-xl">
+    <!-- Tin mới -->
+    <div class="lg:col-span-8 flex flex-col gap-space-md">
+        <div class="flex items-center justify-between">
+            <h2 class="font-headline-lg text-headline-lg text-on-surface">Tin mới</h2>
+            <a href="{% url 'cms:post_list' %}" class="font-label-md text-label-md text-primary hover:underline">Xem tất cả →</a>
+        </div>
+
+        {% if featured %}
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-space-md">
+            {% for p in featured %}
+            <a href="{% url 'cms:post_public' p.slug %}" class="group bg-white rounded-xl shadow-sm overflow-hidden flex flex-col hover:shadow-md transition-shadow">
+                <div class="h-32 bg-primary-container flex items-center justify-center">
+                    <span class="msym text-white/40 text-[48px]">article</span>
+                </div>
+                <div class="p-space-md flex flex-col gap-space-xs">
+                    <span class="font-label-sm text-label-sm text-primary uppercase">{{ p.get_post_type_display }}</span>
+                    <h3 class="font-headline-sm text-headline-sm text-on-surface group-hover:text-primary transition-colors line-clamp-2">{{ p.title }}</h3>
+                    {% if p.summary %}<p class="font-body-sm text-body-sm text-on-surface-variant line-clamp-2">{{ p.summary }}</p>{% endif %}
+                    <span class="font-label-sm text-label-sm text-outline mt-auto">{{ p.published_at|vn_date }}</span>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <div class="bg-white rounded-xl shadow-sm divide-y divide-outline-variant/30 overflow-hidden">
+            {% for p in latest %}
+            <a href="{% url 'cms:post_public' p.slug %}" class="group p-space-md flex items-start gap-space-md hover:bg-surface-container-low transition-colors">
+                <div class="w-10 h-10 rounded-xl bg-surface-container flex items-center justify-center shrink-0">
+                    <span class="msym text-[20px] text-primary">
+                        {% if p.post_type == 'guide' %}menu_book{% elif p.post_type == 'bulletin' or p.post_type == 'forecast' %}query_stats{% elif p.post_type == 'notice' %}campaign{% else %}article{% endif %}
+                    </span>
+                </div>
+                <div class="min-w-0 flex-1">
+                    <div class="flex items-center gap-space-xs mb-0.5">
+                        <span class="font-label-sm text-label-sm text-primary uppercase">{{ p.get_post_type_display }}</span>
+                        {% if p.category %}<span class="font-label-sm text-label-sm text-outline">· {{ p.category.name }}</span>{% endif %}
+                    </div>
+                    <h3 class="font-title-md text-title-md text-on-surface group-hover:text-primary transition-colors">{{ p.title }}</h3>
+                    {% if p.summary %}<p class="font-body-sm text-body-sm text-on-surface-variant line-clamp-2 mt-0.5">{{ p.summary }}</p>{% endif %}
+                </div>
+                <span class="font-label-sm text-label-sm text-outline shrink-0">{{ p.published_at|vn_date }}</span>
+            </a>
+            {% empty %}
+            <div class="p-space-3xl text-center text-on-surface-variant font-body-md">
+                <span class="msym text-[40px] block opacity-30 mb-2">inbox</span>Chưa có bài viết được đăng.
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Sidebar -->
+    <aside class="lg:col-span-4 flex flex-col gap-space-lg">
+        <div class="bg-white rounded-xl shadow-sm p-space-lg">
+            <div class="flex items-center gap-space-sm mb-space-md">
+                <span class="msym text-[20px] text-primary">menu_book</span>
+                <h2 class="font-headline-sm text-headline-sm text-on-surface">Hướng dẫn kỹ thuật</h2>
+            </div>
+            <ul class="flex flex-col gap-space-sm">
+                {% for p in bulletins %}
+                <li>
+                    <a href="{% url 'cms:post_public' p.slug %}" class="group flex items-start gap-space-sm">
+                        <span class="msym text-[16px] text-primary mt-0.5 shrink-0">chevron_right</span>
+                        <div class="min-w-0">
+                            <span class="block font-body-sm text-body-sm text-on-surface group-hover:text-primary">{{ p.title }}</span>
+                            <span class="block font-label-sm text-label-sm text-outline">{{ p.published_at|vn_date }}</span>
+                        </div>
+                    </a>
+                </li>
+                {% empty %}
+                <li class="font-body-sm text-on-surface-variant">Chưa có bản tin.</li>
+                {% endfor %}
+            </ul>
+            <a href="{% url 'cms:post_list' %}?type=guide" class="mt-space-md h-9 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface font-label-md flex items-center justify-center">
+                Xem tất cả hướng dẫn
+            </a>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-sm p-space-lg">
+            <div class="flex items-center gap-space-sm mb-space-md">
+                <span class="msym text-[20px] text-primary">category</span>
+                <h2 class="font-headline-sm text-headline-sm text-on-surface">Chuyên mục</h2>
+            </div>
+            <div class="flex flex-wrap gap-space-xs">
+                {% for c in categories %}
+                <a href="{% url 'cms:post_list' %}?cat={{ c.slug }}"
+                   class="px-space-sm py-1 rounded-full bg-surface-container hover:bg-primary-fixed hover:text-on-primary-fixed text-on-surface font-label-md transition-colors">
+                    {{ c.name }}
+                </a>
+                {% empty %}
+                <span class="font-body-sm text-on-surface-variant">Chưa có chuyên mục.</span>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="bg-surface-container rounded-xl p-space-lg">
+            <div class="flex items-center gap-space-sm mb-space-sm">
+                <span class="msym text-[20px] text-primary">info</span>
+                <h2 class="font-headline-sm text-headline-sm text-on-surface">Lưu ý sử dụng</h2>
+            </div>
+            <p class="font-body-sm text-body-sm text-on-surface-variant">
+                Phần mềm là công cụ hỗ trợ phân tích. Kết luận chuyên môn thuộc cơ quan, cán bộ có thẩm quyền.
+                Vui lòng đối chiếu với văn bản quy phạm pháp luật hiện hành trước khi áp dụng.
+            </p>
+        </div>
+    </aside>
+</div>
+{% endblock %}

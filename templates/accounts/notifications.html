@@ -1,0 +1,51 @@
+{% extends "base_ui.html" %}
+{% load ui %}
+{% block title %}Thông báo{% endblock %}
+
+{% block page_header %}
+<div class="pt-space-md pb-space-md flex flex-wrap items-end justify-between gap-space-md">
+  <div class="min-w-0">
+    <nav class="flex flex-wrap items-center gap-1 text-on-surface-variant font-label-md mb-space-xs">
+      <a href="{% url 'cms:home' %}" class="hover:text-primary">Trang chủ</a>
+      <span class="msym text-[14px] text-outline">chevron_right</span>
+      <span class="text-primary font-semibold">Thông báo</span>
+    </nav>
+    <h1 class="font-display-sm text-display-sm text-on-surface tracking-tight">Thông báo</h1>
+  </div>
+  <form method="post">{% csrf_token %}
+    <button class="h-10 px-space-md rounded-xl bg-surface-container hover:bg-surface-container-high text-on-surface font-label-lg inline-flex items-center gap-1.5" type="submit">
+      <span class="msym text-[18px]">done_all</span>Đánh dấu đã đọc tất cả
+    </button>
+  </form>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl bg-white rounded-xl shadow-sm overflow-hidden divide-y divide-outline-variant/30">
+  {% for n in items %}
+  <a href="{% url 'accounts:notification_open' n.pk %}"
+     class="flex items-start gap-space-md p-space-md hover:bg-surface-container-low transition-colors {% if not n.is_read %}bg-primary-fixed/15{% endif %}">
+    <div class="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 {% if n.is_read %}bg-surface-container text-outline{% else %}bg-primary-fixed text-primary{% endif %}">
+      <span class="msym text-[20px]">{% if n.is_read %}notifications{% else %}mark_email_unread{% endif %}</span>
+    </div>
+    <div class="min-w-0 flex-1">
+      <div class="flex items-start justify-between gap-space-sm">
+        <span class="font-title-md text-title-md text-on-surface {% if not n.is_read %}font-bold{% endif %}">{{ n.title }}</span>
+        <span class="font-label-sm text-label-sm text-outline whitespace-nowrap">{{ n.created_at|vn_date }}</span>
+      </div>
+      {% if n.message %}
+      <p class="font-body-sm text-body-sm text-on-surface-variant mt-0.5 line-clamp-2">{{ n.message|truncatechars:160 }}</p>
+      {% endif %}
+    </div>
+    {% if not n.is_read %}
+    <span class="w-2 h-2 rounded-full bg-tertiary shrink-0 mt-2" title="Chưa đọc"></span>
+    {% endif %}
+  </a>
+  {% empty %}
+  <div class="p-space-3xl text-center text-on-surface-variant font-body-md">
+    <span class="msym text-[44px] block opacity-30 mb-2">notifications_off</span>
+    Chưa có thông báo.
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

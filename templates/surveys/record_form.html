@@ -1,0 +1,78 @@
+{% extends "base_ui.html" %}
+{% block title %}Phiếu điều tra{% endblock %}
+
+{% block page_header %}
+<div class="pt-space-md pb-space-md">
+  <nav class="flex flex-wrap items-center gap-1 text-on-surface-variant font-label-md mb-space-xs">
+    <a href="{% url 'surveys:record_list' %}" class="hover:text-primary">Phiếu điều tra</a>
+    <span class="msym text-[14px] text-outline">chevron_right</span>
+    <span class="text-primary font-semibold">{% if rec %}Chỉnh sửa phiếu #{{ rec.pk }}{% else %}Nhập phiếu mới{% endif %}</span>
+  </nav>
+  <h1 class="font-display-sm text-display-sm text-on-surface tracking-tight">
+    {% if rec %}Chỉnh sửa phiếu #{{ rec.pk }}{% else %}Nhập phiếu điều tra{% endif %}
+  </h1>
+  {% if task %}
+  <p class="font-body-md text-body-md text-on-surface-variant mt-space-2xs">
+    Theo nhiệm vụ: <strong>{{ task }}</strong>
+  </p>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl">
+  <form method="post" novalidate class="bg-white rounded-xl shadow-sm p-space-xl flex flex-col gap-space-lg">
+    {% csrf_token %}
+    {% if form.non_field_errors %}
+    <div class="flex items-start gap-space-sm px-space-md py-space-sm rounded-xl bg-error-container text-on-error-container font-body-sm">
+      <span class="msym text-[18px] shrink-0">error</span>
+      <div>{{ form.non_field_errors }}</div>
+    </div>
+    {% endif %}
+
+    {% include "partials/form_fields.html" %}
+
+    <div class="flex flex-wrap items-center gap-space-sm pt-space-md border-t border-outline-variant/30">
+      <button class="h-10 px-space-lg rounded-xl bg-surface-container hover:bg-surface-container-high text-on-surface font-label-lg inline-flex items-center gap-2" type="submit">
+        <span class="msym text-[20px]">save</span>Lưu tạm
+      </button>
+      <button class="h-10 px-space-lg rounded-xl bg-primary hover:bg-primary-container text-white font-label-lg inline-flex items-center gap-2 shadow-sm" type="submit" name="submit" value="1">
+        <span class="msym text-[20px]">send</span>Lưu và gửi xác nhận
+      </button>
+      <button class="h-10 px-space-md rounded-xl bg-secondary-fixed text-on-secondary-fixed font-label-lg inline-flex items-center gap-1.5" type="button" id="btn-gps">
+        <span class="msym text-[18px]">my_location</span>Lấy tọa độ GPS
+      </button>
+      <a class="h-10 px-space-md rounded-xl text-on-surface-variant hover:text-primary font-label-lg inline-flex items-center" href="{% url 'surveys:record_list' %}">Hủy</a>
+    </div>
+
+    <p class="font-label-sm text-label-sm text-outline flex items-start gap-1.5">
+      <span class="msym text-[15px] shrink-0 mt-0.5">info</span>
+      <span>Hệ thống sẽ kiểm tra tính hợp lệ, logic và cảnh báo dữ liệu có dấu hiệu trùng lặp khi lưu.
+        Ảnh, tài liệu được đính kèm ở trang chi tiết sau khi lưu.</span>
+    </p>
+  </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+    var btn = document.getElementById('btn-gps');
+    if (!btn) return;
+    btn.addEventListener('click', function () {
+        if (!navigator.geolocation) { alert('Thiết bị không hỗ trợ định vị.'); return; }
+        btn.disabled = true;
+        navigator.geolocation.getCurrentPosition(function (p) {
+            var lat = document.getElementById('id_latitude');
+            var lng = document.getElementById('id_longitude');
+            if (lat) lat.value = p.coords.latitude.toFixed(6);
+            if (lng) lng.value = p.coords.longitude.toFixed(6);
+            btn.disabled = false;
+        }, function () {
+            alert('Không lấy được vị trí. Hãy cấp quyền định vị cho trình duyệt.');
+            btn.disabled = false;
+        }, { enableHighAccuracy: true, timeout: 15000 });
+    });
+})();
+</script>
+{% endblock %}

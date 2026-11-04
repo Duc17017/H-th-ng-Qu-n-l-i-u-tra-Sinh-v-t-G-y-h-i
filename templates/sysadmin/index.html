@@ -1,0 +1,257 @@
+{% extends "base_ui.html" %}
+{% load ui %}
+{% block title %}Quản trị hệ thống{% endblock %}
+
+{% block page_header %}
+<div class="pt-space-md pb-space-lg flex flex-wrap items-end justify-between gap-space-md">
+  <div class="min-w-0">
+    <nav class="flex flex-wrap items-center gap-1 text-on-surface-variant font-label-md text-label-md mb-space-xs">
+      <a href="{% url 'cms:home' %}" class="hover:text-primary">Trang chủ</a>
+      <span class="msym text-[14px] text-outline">chevron_right</span>
+      <span class="text-primary font-semibold">Quản trị hệ thống</span>
+    </nav>
+    <h1 class="font-display-sm text-display-sm text-on-surface tracking-tight">Quản trị hệ thống &amp; Danh mục chuyên môn</h1>
+    <p class="font-body-md text-body-md text-on-surface-variant max-w-4xl mt-space-2xs">
+      Tài khoản, ma trận phân quyền RBAC, danh mục chuyên môn, nhật ký kiểm toán và sao lưu dữ liệu.
+    </p>
+  </div>
+  <div class="flex flex-wrap items-center gap-space-sm">
+    <a href="{% url 'sysadmin:audit' %}" class="h-10 px-space-md rounded-xl bg-surface-container hover:bg-surface-container-high text-on-surface font-label-lg inline-flex items-center gap-1.5">
+      <span class="msym text-[18px]">history</span>Nhật ký thao tác
+    </a>
+    <a href="{% url 'sysadmin:backups' %}" class="h-10 px-space-lg rounded-xl bg-primary hover:bg-primary-container text-white font-label-lg inline-flex items-center gap-2 shadow-sm">
+      <span class="msym text-[20px]">cloud_sync</span>Sao lưu &amp; khôi phục
+    </a>
+  </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- KPI -->
+<div class="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-space-md mb-space-lg">
+  {% with k=kpi %}
+  <div class="bg-white rounded-xl shadow-sm p-space-md flex flex-col justify-between gap-space-sm">
+    <div class="flex items-center justify-between">
+      <span class="font-label-md text-label-md text-on-surface-variant">Tài khoản</span>
+      <span class="msym text-[18px] text-primary">group</span>
+    </div>
+    <div>
+      <div class="font-display-sm text-display-sm text-on-surface leading-none">{{ k.total_users }}</div>
+      <div class="font-label-sm text-label-sm text-on-surface-variant mt-1">{{ k.active_users }} đang hoạt động</div>
+    </div>
+  </div>
+  <div class="bg-white rounded-xl shadow-sm p-space-md flex flex-col justify-between gap-space-sm">
+    <div class="flex items-center justify-between">
+      <span class="font-label-md text-label-md text-on-surface-variant">Trực tuyến</span>
+      <span class="msym text-[18px] text-primary">sensors</span>
+    </div>
+    <div>
+      <div class="font-display-sm text-display-sm text-primary leading-none">{{ k.online }}</div>
+      <div class="font-label-sm text-label-sm text-primary mt-1 flex items-center gap-1">
+        <span class="w-1.5 h-1.5 rounded-full bg-primary-container animate-pulse"></span>30 phút qua
+      </div>
+    </div>
+  </div>
+  <div class="bg-white rounded-xl shadow-sm p-space-md flex flex-col justify-between gap-space-sm">
+    <div class="flex items-center justify-between">
+      <span class="font-label-md text-label-md text-on-surface-variant">Phủ sóng địa bàn</span>
+      <span class="msym text-[18px] text-primary">public</span>
+    </div>
+    <div>
+      <div class="font-display-sm text-display-sm text-on-surface leading-none">{{ k.coverage }}%</div>
+      <div class="w-full bg-surface-container rounded-full h-1.5 mt-2 overflow-hidden">
+        <div class="bg-primary h-full rounded-full" style="width: {{ k.coverage }}%"></div>
+      </div>
+    </div>
+  </div>
+  <div class="bg-white rounded-xl shadow-sm p-space-md flex flex-col justify-between gap-space-sm">
+    <div class="flex items-center justify-between">
+      <span class="font-label-md text-label-md text-on-surface-variant">Ma trận RBAC</span>
+      <span class="msym text-[18px] text-primary">shield</span>
+    </div>
+    <div>
+      <div class="font-display-sm text-display-sm text-on-surface leading-none">{{ k.role_count }}</div>
+      <div class="font-label-sm text-label-sm text-on-surface-variant mt-1">{{ k.perm_count }} quyền đã cấu hình</div>
+    </div>
+  </div>
+  <div class="bg-white rounded-xl shadow-sm p-space-md flex flex-col justify-between gap-space-sm">
+    <div class="flex items-center justify-between">
+      <span class="font-label-md text-label-md text-on-surface-variant">Danh mục</span>
+      <span class="msym text-[18px] text-primary">inventory_2</span>
+    </div>
+    <div>
+      <div class="font-headline-lg text-headline-lg text-on-surface leading-none">{{ k.pests }} / {{ k.crops }}</div>
+      <div class="font-label-sm text-label-sm text-on-surface-variant mt-1">SVGH / Cây trồng</div>
+    </div>
+  </div>
+  <div class="bg-white rounded-xl shadow-sm p-space-md flex flex-col justify-between gap-space-sm">
+    <div class="flex items-center justify-between">
+      <span class="font-label-md text-label-md text-on-surface-variant">An toàn dữ liệu</span>
+      <span class="msym text-[18px] {% if k.fails_24h %}text-tertiary{% else %}text-primary{% endif %}">security</span>
+    </div>
+    <div>
+      <div class="font-title-md text-title-md text-on-surface leading-tight">
+        {% if k.last_backup %}{{ k.last_backup.created_at|vn_date }}{% else %}Chưa sao lưu{% endif %}
+      </div>
+      <div class="font-label-sm text-label-sm {% if k.fails_24h %}text-tertiary{% else %}text-on-surface-variant{% endif %} mt-1">
+        {{ k.fails_24h }} đăng nhập thất bại / 24h
+      </div>
+    </div>
+  </div>
+  {% endwith %}
+</div>
+
+<div class="grid grid-cols-1 xl:grid-cols-12 gap-space-lg">
+  <!-- Users -->
+  <div class="xl:col-span-8 bg-white rounded-xl shadow-sm overflow-hidden">
+    <div class="p-space-md bg-surface-container-low border-b border-outline-variant/30 flex flex-wrap items-center justify-between gap-space-sm">
+      <div class="flex items-center gap-space-sm">
+        <span class="msym text-[18px] text-primary">group</span>
+        <h2 class="font-headline-sm text-headline-sm text-on-surface">Người dùng hệ thống</h2>
+        <span class="px-2 py-0.5 rounded-full bg-primary-fixed text-on-primary-fixed font-label-sm font-semibold">{{ page.paginator.count }}</span>
+      </div>
+      <a href="{% url 'accounts:users_create' %}" class="h-9 px-space-md rounded-lg bg-primary text-white font-label-md inline-flex items-center gap-1">
+        <span class="msym text-[16px]">person_add</span>Thêm
+      </a>
+    </div>
+
+    <form method="get" class="p-space-md border-b border-outline-variant/30 grid grid-cols-1 sm:grid-cols-4 gap-space-sm">
+      <div class="flex flex-col gap-1 sm:col-span-2">
+        <label class="tw-label" for="uq">Tìm kiếm</label>
+        <input class="tw-input" id="uq" type="search" name="q" value="{{ g.q|default:'' }}" placeholder="Tên, tài khoản, email...">
+      </div>
+      <div class="flex flex-col gap-1">
+        <label class="tw-label" for="uu">Đơn vị</label>
+        <select class="tw-input" id="uu" name="unit">
+          <option value="">Tất cả</option>
+          {% for u in units %}<option value="{{ u.pk }}" {% if g.unit == u.pk|stringformat:"s" %}selected{% endif %}>{{ u.name }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="flex items-end gap-space-xs">
+        <button class="h-10 px-space-md rounded-xl bg-primary text-white font-label-lg" type="submit">Lọc</button>
+        <a class="h-10 px-space-md rounded-xl bg-surface-container text-on-surface font-label-lg inline-flex items-center" href="{% url 'sysadmin:index' %}">Xóa</a>
+      </div>
+    </form>
+
+    <div class="overflow-x-auto">
+      <table class="w-full text-left border-collapse">
+        <thead>
+          <tr class="bg-surface-container text-on-surface-variant font-label-sm text-label-sm uppercase tracking-wider">
+            <th class="py-space-sm px-space-md">Người dùng</th>
+            <th class="py-space-sm px-space-md">Đơn vị &amp; vai trò</th>
+            <th class="py-space-sm px-space-md">Địa bàn</th>
+            <th class="py-space-sm px-space-md">Trạng thái</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-outline-variant/30 font-body-sm text-body-sm">
+          {% for u in page %}
+          <tr class="hover:bg-surface-container-low transition-colors">
+            <td class="py-space-sm px-space-md">
+              <div class="flex items-center gap-space-sm">
+                <div class="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center font-label-md font-bold shrink-0">{{ u|initials }}</div>
+                <div class="min-w-0">
+                  <div class="font-title-md text-title-md text-on-surface truncate">{{ u.display_name }}</div>
+                  <div class="font-label-sm text-label-sm text-outline truncate">{{ u.email|default:u.username }}</div>
+                </div>
+              </div>
+            </td>
+            <td class="py-space-sm px-space-md">
+              <div class="text-on-surface">{{ u.unit.name|default:"—" }}</div>
+              <div class="mt-1">{{ u|role_badge }}</div>
+            </td>
+            <td class="py-space-sm px-space-md text-on-surface-variant">{{ u.division.name|default:"Toàn tỉnh" }}</td>
+            <td class="py-space-sm px-space-md">
+              {% if u.is_active %}
+              <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary-fixed text-on-primary-fixed font-label-sm font-semibold">
+                <span class="w-1.5 h-1.5 rounded-full bg-primary"></span>Hoạt động
+              </span>
+              {% else %}
+              <span class="px-2 py-0.5 rounded-full bg-surface-container text-on-surface-variant font-label-sm">Đã khóa</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="4" class="py-space-2xl text-center text-on-surface-variant">Không có người dùng phù hợp.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% include "partials/pagination.html" %}
+  </div>
+
+  <!-- RBAC + audit -->
+  <div class="xl:col-span-4 flex flex-col gap-space-lg">
+    <div class="bg-white rounded-xl shadow-sm p-space-lg flex flex-col gap-space-md">
+      <div class="flex items-center justify-between">
+        <h2 class="font-headline-sm text-headline-sm text-on-surface">Ma trận phân quyền</h2>
+        <a href="{% url 'accounts:role_matrix' %}" class="font-label-md text-primary hover:underline">Chi tiết →</a>
+      </div>
+      <form method="get" class="flex items-center gap-space-sm">
+        <input type="hidden" name="q" value="{{ g.q|default:'' }}">
+        <label class="font-label-sm text-label-sm text-on-surface-variant uppercase shrink-0" for="vr">Vai trò</label>
+        <select id="vr" name="view_role" onchange="this.form.submit()" class="tw-input">
+          {% for code, label in role_choices %}
+          <option value="{{ code }}" {% if code == sel_role %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </form>
+      <div class="flex flex-col gap-1 max-h-96 overflow-y-auto pr-1">
+        {% for mod in role_matrix %}
+        <div class="px-space-sm py-1.5 rounded-lg bg-surface-container-low flex items-center justify-between gap-space-sm">
+          <span class="font-body-sm text-body-sm text-on-surface truncate">{{ mod.label }}</span>
+          <div class="flex items-center gap-1 shrink-0">
+            {% for cell in mod.cells %}
+            <span title="{{ cell.label }}" class="w-5 h-5 rounded flex items-center justify-center
+              {% if cell.on %}bg-primary text-white{% else %}bg-surface-container text-outline{% endif %}">
+              <span class="msym text-[13px]">{% if cell.on %}check{% else %}remove{% endif %}</span>
+            </span>
+            {% endfor %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      <p class="font-label-sm text-label-sm text-outline">
+        Đang xem: <strong class="text-on-surface">{{ sel_role_label }}</strong> — dữ liệu đọc trực tiếp từ bảng <code>RolePermission</code>.
+      </p>
+    </div>
+
+    <div class="bg-white rounded-xl shadow-sm p-space-lg flex flex-col gap-space-md">
+      <div class="flex items-center justify-between">
+        <h2 class="font-headline-sm text-headline-sm text-on-surface">Nhật ký gần đây</h2>
+        <a href="{% url 'sysadmin:audit' %}" class="font-label-md text-primary hover:underline">Tất cả →</a>
+      </div>
+      <div class="flex flex-col gap-space-xs">
+        {% for log in audit %}
+        <div class="px-space-sm py-1.5 rounded-lg bg-surface-container-low flex items-start gap-space-sm">
+          <div class="w-6 h-6 rounded-full {{ log.action|audit_icon:'class' }} flex items-center justify-center shrink-0 mt-0.5">
+            <span class="msym text-[14px]">{{ log.action|audit_icon:"icon" }}</span>
+          </div>
+          <div class="min-w-0 flex-1">
+            <p class="font-body-sm text-body-sm text-on-surface truncate">{{ log.username|default:"hệ thống" }} · {{ log.action }}</p>
+            <p class="font-label-sm text-label-sm text-outline truncate">{{ log.model_label }} #{{ log.object_id }} · {{ log.created_at|vn_date }}</p>
+          </div>
+        </div>
+        {% empty %}
+        <p class="font-body-sm text-on-surface-variant text-center py-space-md">Chưa có nhật ký.</p>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Quick links -->
+<div class="mt-space-lg bg-white rounded-xl shadow-sm p-space-lg">
+  <h2 class="font-headline-sm text-headline-sm text-on-surface mb-space-md">Chức năng quản trị</h2>
+  <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-space-sm">
+    {% for title, url, desc in links %}
+    <a href="{{ url }}" class="group px-space-md py-space-sm rounded-xl bg-surface-container-low hover:bg-primary-fixed/40 transition-colors flex items-start gap-space-sm">
+      <span class="msym text-[18px] text-primary mt-0.5 shrink-0">chevron_right</span>
+      <div class="min-w-0">
+        <span class="block font-title-md text-title-md text-on-surface group-hover:text-primary">{{ title }}</span>
+        <span class="block font-body-sm text-body-sm text-on-surface-variant mt-0.5">{{ desc }}</span>
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

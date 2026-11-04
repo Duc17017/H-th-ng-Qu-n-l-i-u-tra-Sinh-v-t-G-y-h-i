@@ -1,0 +1,164 @@
+import os
+from pathlib import Path
+
+from dotenv import load_dotenv
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+load_dotenv(BASE_DIR / ".env")
+
+SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "dev-insecure-change-me")
+DEBUG = os.getenv("DJANGO_DEBUG", "1") == "1"
+ALLOWED_HOSTS = [h.strip() for h in os.getenv("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")]
+CSRF_TRUSTED_ORIGINS = [o for o in os.getenv("DJANGO_CSRF_ORIGINS", "").split(",") if o]
+
+INSTALLED_APPS = [
+    "django.contrib.auth",
+    "django.contrib.contenttypes",
+    "django.contrib.sessions",
+    "django.contrib.messages",
+    "django.contrib.staticfiles",
+    "core",
+    "accounts",
+    "catalog",
+    "cms",
+    "surveys",
+    "mapview",
+    "forecasts",
+    "alerts",
+    "reports",
+    "sysadmin",
+]
+
+MIDDLEWARE = [
+    "django.middleware.security.SecurityMiddleware",
+    "django.contrib.sessions.middleware.SessionMiddleware",
+    "django.middleware.common.CommonMiddleware",
+    "django.middleware.csrf.CsrfViewMiddleware",
+    "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "django.contrib.messages.middleware.MessageMiddleware",
+    "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "core.middleware.CurrentUserMiddleware",
+]
+
+ROOT_URLCONF = "config.urls"
+WSGI_APPLICATION = "config.wsgi.application"
+
+TEMPLATES = [{
+    "BACKEND": "django.template.backends.django.DjangoTemplates",
+    "DIRS": [BASE_DIR / "templates"],
+    "APP_DIRS": True,
+    "OPTIONS": {"context_processors": [
+        "django.template.context_processors.request",
+        "django.contrib.auth.context_processors.auth",
+        "django.contrib.messages.context_processors.messages",
+        "core.context_processors.app_context",
+    ]},
+}]
+
+# Cơ sở dữ liệu: PostgreSQL (mặc định). DB_ENGINE=sqlite chỉ dùng để thử nhanh.
+if os.getenv("DB_ENGINE", "postgres") == "sqlite":
+    DATABASES = {"default": {"ENGINE": "django.db.backends.sqlite3", "NAME": BASE_DIR / "db.sqlite3"}}
+else:
+    DATABASES = {"default": {
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": os.getenv("DB_NAME", "pest_survey"),
+        "USER": os.getenv("DB_USER", "postgres"),
+        "PASSWORD": os.getenv("DB_PASSWORD", ""),
+        "HOST": os.getenv("DB_HOST", "localhost"),
+        "PORT": os.getenv("DB_PORT", "5432"),
+    }}
+
+AUTH_USER_MODEL = "accounts.User"
+AUTH_PASSWORD_VALIDATORS = [
+    {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
+    {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator", "OPTIONS": {"min_length": 8}},
+    {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
+    {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
+]
+LOGIN_URL = "accounts:login"
+LOGIN_REDIRECT_URL = "reports:dashboard"
+LOGOUT_REDIRECT_URL = "cms:home"
+
+LANGUAGE_CODE = "vi"
+TIME_ZONE = "Asia/Ho_Chi_Minh"
+USE_I18N = True
+USE_TZ = True
+
+STATIC_URL = "static/"
+STATICFILES_DIRS = [BASE_DIR / "static"]
+STATIC_ROOT = BASE_DIR / "staticfiles"
+MEDIA_URL = "media/"
+MEDIA_ROOT = BASE_DIR / "media"
+BACKUP_DIR = BASE_DIR / "backups"
+DATA_UPLOAD_MAX_MEMORY_SIZE = 20 * 1024 * 1024
+DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+# Mặc định của Django là "same-origin" nên các máy chủ ảnh nền bản đồ (OpenStreetMap...) từ chối tải.
+SECURE_REFERRER_POLICY = "strict-origin-when-cross-origin"
+
+if os.getenv("EMAIL_HOST"):
+    EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+    EMAIL_HOST = os.getenv("EMAIL_HOST")
+    EMAIL_PORT = int(os.getenv("EMAIL_PORT", "587"))
+    EMAIL_HOST_USER = os.getenv("EMAIL_USER", "")
+    EMAIL_HOST_PASSWORD = os.getenv("EMAIL_PASSWORD", "")
+    EMAIL_USE_TLS = True
+else:
+    EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "bvtv@example.local")
+
+# Đường dẫn font Unicode để xuất PDF tiếng Việt (tự dò nếu để trống)
+PDF_FONT_PATH = os.getenv("PDF_FONT_PATH", "")
+PG_BIN_DIR = os.getenv("PG_BIN_DIR", "")
+
+# ── Ghi log ────────────────────────────────────────────────────────────────────
+# Không có LOGGING thì lỗi production sẽ im lặng, không truy vết được.
+LOG_LEVEL = os.getenv("DJANGO_LOG_LEVEL", "INFO")
+LOG_DIR = BASE_DIR / "logs"
+LOG_DIR.mkdir(exist_ok=True)
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "verbose": {"format": "{levelname} {asctime} {name} {message}", "style": "{"},
+    },
+    "handlers": {
+        "console": {"class": "logging.StreamHandler", "formatter": "verbose"},
+        "file": {
+            "class": "logging.handlers.RotatingFileHandler",
+            "filename": LOG_DIR / "app.log",
+            "maxBytes": 10 * 1024 * 1024,
+            "backupCount": 10,
+            "encoding": "utf-8",
+            "formatter": "verbose",
+        },
+    },
+    "root": {"handlers": ["console", "file"], "level": LOG_LEVEL},
+    "loggers": {
+        "django.request": {"handlers": ["console", "file"], "level": "WARNING", "propagate": False},
+        "django.security": {"handlers": ["console", "file"], "level": "WARNING", "propagate": False},
+        "core": {"handlers": ["console", "file"], "level": LOG_LEVEL, "propagate": False},
+        "alerts": {"handlers": ["console", "file"], "level": LOG_LEVEL, "propagate": False},
+        "accounts": {"handlers": ["console", "file"], "level": LOG_LEVEL, "propagate": False},
+    },
+}
+
+# ── Chống dò mật khẩu (brute-force) ───────────────────────────────────────────
+# Số lần đăng nhập sai liên tiếp trước khi tạm khoá, và thời gian khoá (giây).
+LOGIN_MAX_ATTEMPTS = int(os.getenv("LOGIN_MAX_ATTEMPTS", "5"))
+LOGIN_LOCKOUT_SECONDS = int(os.getenv("LOGIN_LOCKOUT_SECONDS", "900"))
+
+if not DEBUG:
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    SESSION_COOKIE_HTTPONLY = True
+    CSRF_COOKIE_HTTPONLY = False  # form đăng nhập cần đọc token bằng JS trong vài trang
+    X_FRAME_OPTIONS = "DENY"
+    SECURE_HSTS_SECONDS = int(os.getenv("DJANGO_HSTS_SECONDS", "0"))
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = SECURE_HSTS_SECONDS > 0
+    SECURE_HSTS_PRELOAD = False
+    # Chỉ bật khi đã có HTTPS chạy ổn định. Bật khi chưa có TLS sẽ khoá người dùng ra ngoài.
+    SECURE_SSL_REDIRECT = os.getenv("DJANGO_SSL_REDIRECT", "0") == "1"
+    if os.getenv("DJANGO_BEHIND_PROXY", "0") == "1":
+        SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")

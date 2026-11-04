@@ -1,0 +1,91 @@
+{% extends "base_ui.html" %}
+{% load ui %}
+{% block title %}Nhiệm vụ điều tra{% endblock %}
+
+{% block page_header %}
+<div class="pt-space-md pb-space-md flex flex-wrap items-end justify-between gap-space-md">
+  <div class="min-w-0">
+    <nav class="flex flex-wrap items-center gap-1 text-on-surface-variant font-label-md mb-space-xs">
+      <a href="{% url 'surveys:plan_list' %}" class="hover:text-primary">Kế hoạch điều tra</a>
+      <span class="msym text-[14px] text-outline">chevron_right</span>
+      <span class="text-primary font-semibold">Nhiệm vụ</span>
+    </nav>
+    <h1 class="font-display-sm text-display-sm text-on-surface tracking-tight">Nhiệm vụ điều tra</h1>
+  </div>
+  <div class="flex flex-wrap items-center gap-space-sm">
+    <a class="h-10 px-space-md rounded-xl bg-primary-fixed text-on-primary-fixed font-label-lg inline-flex items-center gap-1.5" href="?mine=1">
+      <span class="msym text-[18px]">person</span>Của tôi
+    </a>
+    <a class="h-10 px-space-md rounded-xl bg-error-container text-on-error-container font-label-lg inline-flex items-center gap-1.5" href="?overdue=1">
+      <span class="msym text-[18px]">schedule</span>Quá hạn
+    </a>
+    <a class="h-10 px-space-md rounded-xl bg-surface-container hover:bg-surface-container-high text-on-surface font-label-lg inline-flex items-center" href="?">Tất cả</a>
+    <a class="h-10 px-space-md rounded-xl bg-primary hover:bg-primary-container text-white font-label-lg inline-flex items-center gap-1.5" href="{% url 'surveys:tasks_list' %}">
+      <span class="msym text-[18px]">settings</span>Quản lý
+    </a>
+  </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<form class="mb-space-md flex items-end gap-space-sm" method="get">
+  <div class="flex flex-col gap-1 min-w-52">
+    <label class="tw-label" for="st">Trạng thái</label>
+    <select class="tw-input" id="st" name="status" onchange="this.form.submit()">
+      <option value="">Mọi trạng thái</option>
+      {% for k, v in statuses %}<option value="{{ k }}" {% if request.GET.status == k %}selected{% endif %}>{{ v }}</option>{% endfor %}
+    </select>
+  </div>
+</form>
+
+<div class="bg-white rounded-xl shadow-sm overflow-hidden">
+  <div class="overflow-x-auto">
+    <table class="w-full text-left border-collapse">
+      <thead>
+        <tr class="bg-surface-container text-on-surface-variant font-label-sm text-label-sm uppercase tracking-wider">
+          <th class="py-space-sm px-space-md">Kế hoạch</th>
+          <th class="py-space-sm px-space-md">Điểm điều tra</th>
+          <th class="py-space-sm px-space-md">Ngày</th>
+          <th class="py-space-sm px-space-md">Hạn</th>
+          <th class="py-space-sm px-space-md">Phụ trách</th>
+          <th class="py-space-sm px-space-md">Trạng thái</th>
+          <th class="py-space-sm px-space-md w-48"></th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-outline-variant/30 font-body-sm text-body-sm">
+        {% for t in page %}
+        <tr class="hover:bg-surface-container-low transition-colors {% if t.overdue %}bg-error-container/20{% endif %}">
+          <td class="py-space-sm px-space-md">
+            <span class="font-title-md text-title-md text-on-surface">{{ t.plan.code }}</span>
+            {% if t.overdue %}<span class="msym text-[15px] text-tertiary align-middle ml-1" title="Quá hạn">schedule</span>{% endif %}
+          </td>
+          <td class="py-space-sm px-space-md">{{ t.point }}</td>
+          <td class="py-space-sm px-space-md whitespace-nowrap">{{ t.survey_date|vn_date }}</td>
+          <td class="py-space-sm px-space-md whitespace-nowrap {% if t.overdue %}text-tertiary font-semibold{% endif %}">{{ t.due_date|vn_date }}</td>
+          <td class="py-space-sm px-space-md text-on-surface-variant">{{ t.assignee|default:"—" }}</td>
+          <td class="py-space-sm px-space-md">{{ t|state_badge }}</td>
+          <td class="py-space-sm px-space-md text-right whitespace-nowrap">
+            {% if t.status == 'assigned' %}
+            <form method="post" action="{% url 'surveys:task_start' t.pk %}" class="inline">
+              {% csrf_token %}
+              <button class="h-8 px-space-sm rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface font-label-md inline-flex items-center gap-1" type="submit">
+                <span class="msym text-[16px]">play_arrow</span>Bắt đầu
+              </button>
+            </form>
+            {% endif %}
+            {% if t.status != 'done' and t.status != 'review' %}
+            <a class="h-8 px-space-sm rounded-lg bg-primary text-white font-label-md inline-flex items-center gap-1" href="{% url 'surveys:record_create' %}?task={{ t.pk }}">
+              <span class="msym text-[16px]">edit_note</span>Nhập phiếu
+            </a>
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="7" class="py-space-3xl text-center text-on-surface-variant">Không có nhiệm vụ.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% include "partials/pagination.html" %}
+{% endblock %}

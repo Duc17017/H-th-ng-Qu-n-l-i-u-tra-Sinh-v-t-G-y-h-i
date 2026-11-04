@@ -1,0 +1,87 @@
+{% extends "base_ui.html" %}
+{% load ui %}
+{% block title %}Quản lý nội dung{% endblock %}
+
+{% block page_header %}
+<div class="pt-space-md pb-space-md flex flex-wrap items-end justify-between gap-space-md">
+  <div class="min-w-0">
+    <nav class="flex flex-wrap items-center gap-1 text-on-surface-variant font-label-md mb-space-xs">
+      <a href="{% url 'cms:home' %}" class="hover:text-primary">Trang chủ</a>
+      <span class="msym text-[14px] text-outline">chevron_right</span>
+      <span class="text-primary font-semibold">Quản lý nội dung</span>
+    </nav>
+    <h1 class="font-display-sm text-display-sm text-on-surface tracking-tight">Quản lý nội dung (CMS)</h1>
+  </div>
+  <div class="flex flex-wrap items-center gap-space-sm">
+    <a class="h-10 px-space-md rounded-xl bg-surface-container hover:bg-surface-container-high text-on-surface font-label-lg inline-flex items-center gap-1.5" href="{% url 'cms:categories_list' %}">
+      <span class="msym text-[18px]">category</span>Chuyên mục
+    </a>
+    {% if can_create %}
+    <a class="h-10 px-space-lg rounded-xl bg-primary hover:bg-primary-container text-white font-label-lg inline-flex items-center gap-2 shadow-sm" href="{% url 'cms:manage_create' %}">
+      <span class="msym text-[20px]">add</span>Bài viết mới
+    </a>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="bg-white rounded-xl shadow-sm overflow-hidden">
+  <form class="p-space-md bg-surface-container-low border-b border-outline-variant/30 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-space-sm" method="get">
+    <div class="flex flex-col gap-1">
+      <label class="tw-label" for="q">Tiêu đề</label>
+      <input class="tw-input" id="q" type="search" name="q" value="{{ q }}">
+    </div>
+    <div class="flex flex-col gap-1">
+      <label class="tw-label" for="st">Trạng thái</label>
+      <select class="tw-input" id="st" name="status">
+        <option value="">Tất cả</option>
+        {% for k, v in statuses %}<option value="{{ k }}" {% if request.GET.status == k %}selected{% endif %}>{{ v }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="flex flex-col gap-1">
+      <label class="tw-label" for="ty">Loại</label>
+      <select class="tw-input" id="ty" name="type">
+        <option value="">Tất cả</option>
+        {% for k, v in types %}<option value="{{ k }}" {% if request.GET.type == k %}selected{% endif %}>{{ v }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="flex items-end">
+      <button class="h-10 flex-1 rounded-xl bg-primary text-white font-label-lg inline-flex items-center justify-center gap-1.5" type="submit">
+        <span class="msym text-[18px]">filter_alt</span>Lọc
+      </button>
+    </div>
+  </form>
+
+  <div class="overflow-x-auto">
+    <table class="w-full text-left border-collapse">
+      <thead>
+        <tr class="bg-surface-container text-on-surface-variant font-label-sm text-label-sm uppercase tracking-wider">
+          <th class="py-space-sm px-space-md">Tiêu đề</th>
+          <th class="py-space-sm px-space-md">Loại</th>
+          <th class="py-space-sm px-space-md">Tác giả</th>
+          <th class="py-space-sm px-space-md">Trạng thái</th>
+          <th class="py-space-sm px-space-md">Cập nhật</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-outline-variant/30 font-body-sm text-body-sm">
+        {% for p in page %}
+        <tr class="hover:bg-surface-container-low transition-colors">
+          <td class="py-space-sm px-space-md">
+            <a href="{% url 'cms:manage_detail' p.pk %}" class="font-title-md text-title-md text-on-surface hover:text-primary">{{ p.title }}</a>
+            {% if p.is_featured %}<span class="msym text-[14px] text-secondary-container align-middle ml-1" title="Nổi bật">star</span>{% endif %}
+          </td>
+          <td class="py-space-sm px-space-md text-on-surface-variant">{{ p.get_post_type_display }}</td>
+          <td class="py-space-sm px-space-md text-on-surface-variant">{{ p.author|default:"—" }}</td>
+          <td class="py-space-sm px-space-md">{{ p|state_badge }}</td>
+          <td class="py-space-sm px-space-md whitespace-nowrap font-data-tabular text-data-tabular">{{ p.updated_at|vn_date }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="5" class="py-space-3xl text-center text-on-surface-variant">Chưa có bài viết.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% include "partials/pagination.html" %}
+{% endblock %}

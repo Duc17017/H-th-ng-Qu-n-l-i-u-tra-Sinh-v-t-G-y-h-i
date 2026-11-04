@@ -1,0 +1,96 @@
+{% extends "base_ui.html" %}
+{% load ui %}
+{% block title %}{{ t.title }}{% endblock %}
+
+{% block page_header %}
+<div class="pt-space-md pb-space-md flex flex-wrap items-end justify-between gap-space-md">
+  <div class="min-w-0">
+    <nav class="flex flex-wrap items-center gap-1 text-on-surface-variant font-label-md mb-space-xs">
+      <a href="{% url 'alerts:followup_list' %}" class="hover:text-primary">Theo dõi sau cảnh báo</a>
+      <span class="msym text-[14px] text-outline">chevron_right</span>
+      <span class="text-primary font-semibold truncate">{{ t.title }}</span>
+    </nav>
+    <div class="flex flex-wrap items-center gap-space-sm">
+      <h1 class="font-display-sm text-display-sm text-on-surface tracking-tight">{{ t.title }}</h1>
+      {{ t|state_badge }}
+      {% if t.overdue %}
+      <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-error-container text-on-error-container font-label-sm font-semibold">
+        <span class="msym text-[13px]">schedule</span>Quá hạn
+      </span>
+      {% endif %}
+    </div>
+  </div>
+  <a class="h-10 px-space-md rounded-xl bg-surface-container hover:bg-surface-container-high text-on-surface font-label-lg inline-flex items-center gap-1.5" href="{% url 'alerts:alert_detail' t.alert_id %}">
+    <span class="msym text-[18px]">campaign</span>Bản tin {{ t.alert.code }}
+  </a>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-space-lg">
+  <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+    <div class="px-space-lg py-space-sm bg-surface-container-low flex items-center gap-2">
+      <span class="msym text-[18px] text-primary">info</span>
+      <h2 class="font-headline-sm text-headline-sm text-on-surface">Thông tin nhiệm vụ</h2>
+    </div>
+    <dl class="divide-y divide-outline-variant/20">
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-space-xs px-space-lg py-space-sm">
+        <dt class="font-label-md text-on-surface-variant">Địa bàn</dt>
+        <dd class="font-body-sm text-on-surface sm:col-span-2">{{ t.division|default:"—" }}</dd>
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-space-xs px-space-lg py-space-sm">
+        <dt class="font-label-md text-on-surface-variant">Đơn vị / phụ trách</dt>
+        <dd class="font-body-sm text-on-surface sm:col-span-2">{{ t.unit|default:"—" }} / {{ t.assignee|default:"—" }}</dd>
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-space-xs px-space-lg py-space-sm">
+        <dt class="font-label-md text-on-surface-variant">Hạn hoàn thành</dt>
+        <dd class="font-body-sm sm:col-span-2 {% if t.overdue %}text-tertiary font-semibold{% else %}text-on-surface{% endif %}">{{ t.due_date|vn_date }}</dd>
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-space-xs px-space-lg py-space-sm">
+        <dt class="font-label-md text-on-surface-variant">Kết quả kiểm tra</dt>
+        <dd class="font-body-sm text-on-surface sm:col-span-2">{{ t.result|default:"—"|linebreaksbr }}</dd>
+      </div>
+    </dl>
+
+    <div class="grid grid-cols-3 gap-space-sm p-space-lg bg-surface-container-low border-y border-outline-variant/30">
+      <div class="bg-white rounded-lg p-space-sm text-center">
+        <div class="font-headline-lg text-headline-lg text-on-surface">{{ t.area_treated|default_if_none:"—" }}</div>
+        <div class="font-label-sm text-label-sm text-on-surface-variant uppercase">Ha phòng trừ</div>
+      </div>
+      <div class="bg-white rounded-lg p-space-sm text-center">
+        <div class="font-headline-lg text-headline-lg text-primary">{{ t.rate_after|default_if_none:"—" }}<span class="font-label-md">{% if t.rate_after is not None %}%{% endif %}</span></div>
+        <div class="font-label-sm text-label-sm text-on-surface-variant uppercase">Tỷ lệ hại sau xử lý</div>
+      </div>
+      <div class="bg-white rounded-lg p-space-sm text-center">
+        <div class="font-headline-lg text-headline-lg text-on-surface">
+          {% if t.effectiveness == 'good' %}Tốt{% elif t.effectiveness == 'fair' %}TB{% elif t.effectiveness == 'poor' %}Kém{% else %}—{% endif %}
+        </div>
+        <div class="font-label-sm text-label-sm text-on-surface-variant uppercase">Hiệu quả</div>
+      </div>
+    </div>
+
+    <dl class="divide-y divide-outline-variant/20">
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-space-xs px-space-lg py-space-sm">
+        <dt class="font-label-md text-on-surface-variant">Hoàn thành lúc</dt>
+        <dd class="font-body-sm text-on-surface sm:col-span-2">{{ t.completed_at|vn_date|default:"—" }}</dd>
+      </div>
+    </dl>
+  </div>
+
+  {% if can_report %}
+  <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+    <div class="px-space-lg py-space-sm bg-surface-container-low flex items-center gap-2">
+      <span class="msym text-[18px] text-primary">edit_note</span>
+      <h2 class="font-headline-sm text-headline-sm text-on-surface">Cập nhật kết quả theo dõi</h2>
+    </div>
+    <form method="post" action="{% url 'alerts:followup_report' t.pk %}" novalidate class="p-space-lg flex flex-col gap-space-md">
+      {% csrf_token %}
+      {% include "partials/form_fields.html" %}
+      <button class="mt-space-sm h-10 rounded-xl bg-primary hover:bg-primary-container text-white font-label-lg inline-flex items-center justify-center gap-2" type="submit">
+        <span class="msym text-[18px]">save</span>Lưu kết quả
+      </button>
+    </form>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

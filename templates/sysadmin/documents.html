@@ -1,0 +1,65 @@
+{% extends "base_ui.html" %}
+{% load ui %}
+{% block title %}Tài liệu hướng dẫn, quy trình{% endblock %}
+
+{% block page_header %}
+<div class="pt-space-md pb-space-md flex flex-wrap items-end justify-between gap-space-md">
+  <div class="min-w-0">
+    <nav class="flex flex-wrap items-center gap-1 text-on-surface-variant font-label-md mb-space-xs">
+      <a href="{% url 'sysadmin:index' %}" class="hover:text-primary">Quản trị hệ thống</a>
+      <span class="msym text-[14px] text-outline">chevron_right</span>
+      <span class="text-primary font-semibold">Tài liệu &amp; quy trình</span>
+    </nav>
+    <h1 class="font-display-sm text-display-sm text-on-surface tracking-tight">Tài liệu hướng dẫn, quy trình kỹ thuật</h1>
+  </div>
+  {% if "edit" in perms_map.system %}
+  <div class="flex flex-wrap items-center gap-space-sm">
+    <a class="h-10 px-space-md rounded-xl bg-surface-container hover:bg-surface-container-high text-on-surface font-label-lg inline-flex items-center gap-1.5" href="{% url 'sysadmin:docs_create' %}">
+      <span class="msym text-[18px]">note_add</span>Tài liệu mới
+    </a>
+    <a class="h-10 px-space-lg rounded-xl bg-primary hover:bg-primary-container text-white font-label-lg inline-flex items-center gap-2 shadow-sm" href="{% url 'sysadmin:versions_create' %}">
+      <span class="msym text-[20px]">upload</span>Đăng phiên bản
+    </a>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-space-lg">
+  {% for d in docs %}
+  <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+    <div class="px-space-lg py-space-sm bg-surface-container-low flex flex-wrap items-center gap-space-sm">
+      <span class="msym text-[18px] text-primary">description</span>
+      <h2 class="font-headline-sm text-headline-sm text-on-surface truncate">{{ d.code }} · {{ d.title }}</h2>
+      <span class="px-2 py-0.5 rounded-full bg-surface-container text-on-surface-variant font-label-sm ml-auto">{{ d.get_kind_display }}</span>
+    </div>
+    <ul class="divide-y divide-outline-variant/20">
+      {% for v in d.versions.all %}
+      <li class="px-space-lg py-space-sm flex items-center justify-between gap-space-sm">
+        <div class="min-w-0">
+          <div class="flex items-center gap-2">
+            <span class="font-title-md text-title-md text-on-surface">v{{ v.version }}</span>
+            {% if v.is_current %}
+            <span class="px-2 py-0.5 rounded-full bg-primary-fixed text-on-primary-fixed font-label-sm font-semibold">Đang áp dụng</span>
+            {% endif %}
+          </div>
+          <p class="font-label-sm text-label-sm text-outline">{{ v.issued_date|vn_date }}{% if v.note %} · {{ v.note }}{% endif %}</p>
+        </div>
+        <a class="h-8 px-space-sm rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface font-label-md inline-flex items-center gap-1 shrink-0"
+           href="{% url 'sysadmin:document_download' v.pk %}">
+          <span class="msym text-[16px]">download</span>Tải
+        </a>
+      </li>
+      {% empty %}
+      <li class="px-space-lg py-space-md text-center font-body-sm text-on-surface-variant">Chưa có phiên bản.</li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% empty %}
+  <div class="col-span-full bg-white rounded-xl shadow-sm p-space-3xl text-center text-on-surface-variant font-body-md">
+    <span class="msym text-[44px] block opacity-30 mb-2">folder_open</span>Chưa có tài liệu.
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

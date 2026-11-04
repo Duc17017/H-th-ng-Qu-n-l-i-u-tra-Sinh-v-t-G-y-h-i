@@ -1,0 +1,149 @@
+{% extends "base_ui.html" %}
+{% load ui %}
+{% block title %}Sao lưu, khôi phục{% endblock %}
+
+{% block page_header %}
+<div class="pt-space-md pb-space-md flex flex-wrap items-end justify-between gap-space-md">
+  <div class="min-w-0">
+    <nav class="flex flex-wrap items-center gap-1 text-on-surface-variant font-label-md mb-space-xs">
+      <a href="{% url 'sysadmin:index' %}" class="hover:text-primary">Quản trị hệ thống</a>
+      <span class="msym text-[14px] text-outline">chevron_right</span>
+      <span class="text-primary font-semibold">Sao lưu &amp; khôi phục</span>
+    </nav>
+    <h1 class="font-display-sm text-display-sm text-on-surface tracking-tight">Sao lưu và khôi phục dữ liệu</h1>
+  </div>
+  <form method="post">{% csrf_token %}
+    <input type="hidden" name="action" value="backup">
+    <button class="h-10 px-space-lg rounded-xl bg-primary hover:bg-primary-container text-white font-label-lg inline-flex items-center gap-2 shadow-sm" type="submit">
+      <span class="msym text-[20px]">cloud_upload</span>Sao lưu ngay
+    </button>
+  </form>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="flex items-start gap-space-sm px-space-md py-space-sm rounded-xl bg-secondary-fixed text-on-secondary-fixed font-body-sm mb-space-lg">
+  <span class="msym text-[18px] shrink-0">warning</span>
+  <span>Khôi phục sẽ <strong>ghi đè dữ liệu hiện tại</strong> bằng nội dung của bản sao lưu.
+    Hãy tạo một bản sao lưu mới trước khi khôi phục. Tệp sao lưu chứa toàn bộ dữ liệu, cần lưu trữ an toàn.</span>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-space-lg">
+  <div class="lg:col-span-7 bg-white rounded-xl shadow-sm overflow-hidden">
+    <div class="px-space-lg py-space-sm bg-surface-container-low flex items-center gap-2">
+      <span class="msym text-[18px] text-primary">folder_zip</span>
+      <h2 class="font-headline-sm text-headline-sm text-on-surface">Các bản sao lưu</h2>
+      <span class="px-2 py-0.5 rounded-full bg-surface-container text-on-surface-variant font-label-sm">{{ files|length }}</span>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-left border-collapse">
+        <thead>
+          <tr class="bg-surface-container text-on-surface-variant font-label-sm text-label-sm uppercase">
+            <th class="py-space-sm px-space-md">Tệp</th>
+            <th class="py-space-sm px-space-md">Dung lượng</th>
+            <th class="py-space-sm px-space-md">Thời điểm</th>
+            <th class="py-space-sm px-space-md w-40"></th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-outline-variant/30 font-body-sm">
+          {% for f in files %}
+          <tr class="hover:bg-surface-container-low">
+            <td class="py-space-sm px-space-md font-data-tabular text-data-tabular text-on-surface">{{ f.name }}</td>
+            <td class="py-space-sm px-space-md text-on-surface-variant">{{ f.size|filesizeformat }}</td>
+            <td class="py-space-sm px-space-md whitespace-nowrap">{{ f.mtime|date:"d/m/Y H:i" }}</td>
+            <td class="py-space-sm px-space-md text-right whitespace-nowrap">
+              <a class="h-8 px-space-sm rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface font-label-md inline-flex items-center gap-1"
+                 href="{% url 'sysadmin:backup_download' f.name %}">
+                <span class="msym text-[16px]">download</span>Tải
+              </a>
+              <button class="h-8 px-space-sm rounded-lg bg-error-container text-on-error-container hover:bg-tertiary-container hover:text-white font-label-md inline-flex items-center gap-1"
+                      type="button" data-restore="{{ f.name }}">
+                <span class="msym text-[16px]">restore</span>Khôi phục
+              </button>
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="4" class="py-space-xl text-center text-on-surface-variant">Chưa có bản sao lưu.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="lg:col-span-5 bg-white rounded-xl shadow-sm overflow-hidden">
+    <div class="px-space-lg py-space-sm bg-surface-container-low flex items-center gap-2">
+      <span class="msym text-[18px] text-primary">history</span>
+      <h2 class="font-headline-sm text-headline-sm text-on-surface">Lịch sử thao tác</h2>
+    </div>
+    <ul class="divide-y divide-outline-variant/20">
+      {% for h in history %}
+      <li class="px-space-lg py-space-sm flex items-start gap-space-sm">
+        <span class="px-2 py-0.5 rounded-full font-label-sm shrink-0
+          {% if h.success %}bg-primary-fixed text-on-primary-fixed{% else %}bg-error-container text-on-error-container{% endif %}">
+          {% if h.success %}OK{% else %}Lỗi{% endif %}
+        </span>
+        <div class="min-w-0 flex-1">
+          <p class="font-body-sm text-body-sm text-on-surface">{{ h.get_action_display }}</p>
+          <p class="font-label-sm text-label-sm text-outline truncate">{{ h.filename }} · {{ h.created_by|default:"—" }}</p>
+          <p class="font-label-sm text-label-sm text-outline">{{ h.created_at|vn_date }}</p>
+        </div>
+      </li>
+      {% empty %}
+      <li class="px-space-lg py-space-md text-center font-body-sm text-on-surface-variant">Chưa có.</li>
+      {% endfor %}
+    </ul>
+  </div>
+</div>
+
+<!-- Restore dialog -->
+<div id="rs" class="hidden fixed inset-0 z-[999] bg-black/40 flex items-center justify-center p-space-md">
+  <form class="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden" method="post">
+    {% csrf_token %}
+    <div class="px-space-lg py-space-md bg-error-container text-on-error-container flex items-center justify-between">
+      <h2 class="font-headline-sm text-headline-sm font-bold flex items-center gap-2">
+        <span class="msym text-[20px]">restore</span>Xác nhận khôi phục
+      </h2>
+      <button type="button" data-close class="w-8 h-8 rounded-lg hover:bg-black/10 inline-flex items-center justify-center">
+        <span class="msym text-[20px]">close</span>
+      </button>
+    </div>
+    <div class="p-space-lg flex flex-col gap-space-sm">
+      <input type="hidden" name="action" value="restore">
+      <input type="hidden" name="name" id="rs-name">
+      <p class="font-body-sm text-body-sm text-on-surface">
+        Khôi phục từ <strong id="rs-label" class="text-tertiary"></strong>. Dữ liệu hiện tại sẽ bị ghi đè.
+      </p>
+      <div class="flex flex-col gap-1">
+        <label class="tw-label" for="rs-confirm">Gõ <code class="text-tertiary">KHOI PHUC</code> để xác nhận</label>
+        <input class="tw-input" id="rs-confirm" name="confirm" autocomplete="off" required>
+      </div>
+    </div>
+    <div class="px-space-lg py-space-md bg-surface-container-low flex justify-end gap-space-sm">
+      <button type="button" data-close class="h-10 px-space-md rounded-xl bg-surface-container hover:bg-surface-container-high text-on-surface font-label-lg">Hủy</button>
+      <button type="submit" class="h-10 px-space-md rounded-xl bg-tertiary-container hover:bg-tertiary text-white font-label-lg inline-flex items-center gap-1.5">
+        <span class="msym text-[18px]">restore</span>Khôi phục
+      </button>
+    </div>
+  </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+    var modal = document.getElementById('rs');
+    function open(name) {
+        document.getElementById('rs-name').value = name;
+        document.getElementById('rs-label').textContent = name;
+        modal.classList.remove('hidden');
+    }
+    function close() { modal.classList.add('hidden'); }
+    document.querySelectorAll('[data-restore]').forEach(function (b) {
+        b.addEventListener('click', function () { open(b.getAttribute('data-restore')); });
+    });
+    document.querySelectorAll('[data-close]').forEach(function (b) { b.addEventListener('click', close); });
+    modal.addEventListener('click', function (e) { if (e.target === modal) close(); });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') close(); });
+})();
+</script>
+{% endblock %}

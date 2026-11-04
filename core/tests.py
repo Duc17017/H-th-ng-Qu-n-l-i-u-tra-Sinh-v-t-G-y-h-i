@@ -1,0 +1,489 @@
+"""Kiểm thử tự động: chạy `python manage.py test` (đặt DB_ENGINE=sqlite để thử nhanh)."""
+import io
+from datetime import timedelta
+
+from django.conf import settings
+from django.core.management import call_command
+from django.test import TestCase
+from django.urls import reverse
+from django.utils import timezone
+
+from accounts.models import User
+from alerts import models as am
+from alerts import services as asv
+from cms import models as cm
+from core.models import AuditLog
+from forecasts import models as fm
+from forecasts import services as fsv
+from surveys import models as sm
+from surveys import services as ssv
+
+
+class SeededCase(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        call_command("seed_demo", stdout=io.StringIO())
+
+    def login(self, username):
+        self.assertTrue(self.client.login(username=username, password="Demo@12345"))
+
+
+class PageSmokeTests(SeededCase):
+    """Mọi trang chính của quản trị viên phải mở được, không lỗi 500."""
+
+    def test_admin_pages(self):
+        self.login("admin")
+        names = [
+            "cms:home", "cms:post_list", "cms:manage_list", "cms:manage_create",
+            "surveys:plan_list", "surveys:plan_create", "surveys:task_list", "surveys:record_list", "surveys:record_create",
+            "surveys:import", "surveys:offline", "surveys:templates_list", "surveys:points_list", "surveys:routes_list",
+            "mapview:map", "mapview:points", "mapview:routes", "mapview:timeline", "mapview:layers_list",
+            "forecasts:analysis", "forecasts:compare", "forecasts:list", "forecasts:create", "forecasts:suggest",
+            "alerts:alert_list", "alerts:alert_create", "alerts:followup_list",
+            "reports:dashboard", "reports:summary", "reports:list",
+            "sysadmin:index", "sysadmin:audit", "sysadmin:logins", "sysadmin:documents", "sysadmin:backups",
+            "sysadmin:configs_list", "sysadmin:docs_list",
+            "accounts:users_list", "accounts:role_matrix", "accounts:profile", "accounts:notifications",
+            "accounts:password_change",
+            "surveys:sandbox", "surveys:template_catalog",
+            "catalog:index", "catalog:crops_list", "catalog:pests_list",
+        ]
+        for n in names:
+            r = self.client.get(reverse(n))
+            self.assertIn(r.status_code, (200, 302), f"{n} -> {r.status_code}")
+            if r.status_code == 200 and "text/html" in r.get("Content-Type", ""):
+                self.assertContains(r, "Material Symbols", msg_prefix=f"{n} chưa dùng shell MD3")
+
+    def test_no_legacy_bootstrap_shell(self):
+        """Toàn bộ giao diện phải dùng base_ui.html / base_public.html, không còn Bootstrap cũ."""
+        tpl_dir = settings.BASE_DIR / "templates"
+        offenders = []
+        for path in tpl_dir.rglob("*.html"):
+            text = path.read_text(encoding="utf-8")
+            if 'extends "base.html"' in text:
+                offenders.append(f"{path.name}: còn extends base.html")
+        self.assertEqual(offenders, [], " | ".join(offenders))
+
+    def test_detail_pages(self):
+        self.login("admin")
+        rec = sm.SurveyRecord.objects.first()
+        for url in (f"/surveys/records/{rec.pk}/", f"/surveys/plans/{sm.SurveyPlan.objects.first().pk}/",
+                    f"/forecasts/forecasts/{fm.Forecast.objects.first().pk}/", f"/alerts/alerts/{am.Alert.objects.first().pk}/",
+                    f"/cms/posts/{cm.Post.objects.first().pk}/", f"/map/api/points/{sm.SurveyPoint.objects.first().pk}/",
+                    f"/alerts/followups/{am.FollowUpTask.objects.first().pk}/",
+                    f"/surveys/template/{sm.FormTemplate.objects.first().pk}/edit-struct/"):
+            self.assertEqual(self.client.get(url).status_code, 200, url)
+
+    def test_template_edit_page_renders_fields(self):
+        """Trang thiết kế biểu mẫu phải hiển thị đúng cấu trúc trường và form chỉnh sửa."""
+        self.login("admin")
+        tpl = sm.FormTemplate.objects.first()
+        r = self.client.get(f"/surveys/template/{tpl.pk}/edit-struct/")
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.context["template"].pk, tpl.pk)
+        self.assertContains(r, tpl.code)
+        for field in tpl.fields.all()[:3]:
+            self.assertContains(r, field.label)
+
+    def test_template_edit_save_redirects_with_selection(self):
+        """Lưu biểu mẫu phải chuyển về danh mục kèm template_id (không lỗi TypeError)."""
+        self.login("admin")
+        tpl = sm.FormTemplate.objects.first()
+        data = {
+            "code": tpl.code, "name": tpl.name + " (cập nhật)", "version": tpl.version,
+            "description": tpl.description, "is_active": "on",
+            "crop": tpl.crop_id or "", "pest": tpl.pest_id or "", "method": tpl.method_id or "",
+        }
+        r = self.client.post(f"/surveys/template/{tpl.pk}/edit-struct/", data)
+        self.assertEqual(r.status_code, 302)
+        self.assertIn(f"template_id={tpl.pk}", r["Location"])
+        tpl.refresh_from_db()
+        self.assertTrue(tpl.name.endswith("(cập nhật)"))
+
+    def test_public_site_no_login(self):
+        r = self.client.get("/")
+        self.assertEqual(r.status_code, 200)
+        self.assertContains(r, "Hướng dẫn kỹ thuật")
+
+    def test_login_required_for_internal(self):
+        r = self.client.get("/surveys/records/")
+        self.assertEqual(r.status_code, 302)
+
+    def test_sidebar_shows_system_links_for_admin(self):
+        """`perms_map.system.view` luôn sai vì set không có thuộc tính — phải dùng `'view' in perms_map.system`."""
+        self.login("admin")
+        body = self.client.get("/system/").content.decode()
+        for label in ("Người dùng", "Phân quyền RBAC", "Sao lưu"):
+            self.assertIn(label, body, f"Sidebar thiếu mục '{label}'")
+
+    def test_every_demo_role_lands_on_accessible_page(self):
+        """Đăng nhập xong phải vào được trang đích — điều tra viên từng bị 403 ở dashboard."""
+        for username in ("admin", "lanhdao", "pheduyet", "chuyenmon", "bientap",
+                         "dieutra1", "dieutra2", "xem"):
+            self.client.logout()
+            self.assertTrue(self.client.login(username=username, password="Demo@12345"), username)
+            r = self.client.get("/accounts/login/", follow=True)  # ép đi qua get_success_url
+            self.assertEqual(r.status_code, 200, f"{username} bị chặn sau đăng nhập")
+            self.assertNotEqual(r.status_code, 403, username)
+
+    def test_surveyor_redirected_to_own_tasks(self):
+        from core.permissions import landing_url
+        u = User.objects.get(username="dieutra1")
+        self.assertEqual(landing_url(u), "/surveys/my-tasks/")
+
+    def test_enter_system_button_respects_role(self):
+        """Nút 'Vào hệ thống' ở cổng công khai không được trỏ tới trang vai trò không có quyền."""
+        for username, target in (("dieutra1", "/surveys/my-tasks/"),
+                                 ("dieutra2", "/surveys/my-tasks/"),
+                                 ("xem", "/reports/dashboard/"),
+                                 ("bientap", "/reports/dashboard/")):
+            self.client.logout()
+            self.client.login(username=username, password="Demo@12345")
+            body = self.client.get("/").content.decode()
+            self.assertIn(f'href="{target}"', body, f"{username}: nút 'Vào hệ thống' sai đích")
+            self.assertEqual(self.client.get(target).status_code, 200, username)
+
+
+class RbacTests(SeededCase):
+    def test_viewer_cannot_open_system(self):
+        self.login("xem")
+        self.assertEqual(self.client.get("/system/").status_code, 403)
+        self.assertEqual(self.client.get("/surveys/records/new/").status_code, 403)
+
+    def test_surveyor_scope_only_own_division(self):
+        self.login("dieutra1")
+        data = self.client.get("/map/api/points/").json()
+        d1 = User.objects.get(username="dieutra1").division
+        allowed = set(d1.descendant_ids())
+        self.assertTrue(data["features"])
+        for f in data["features"]:
+            self.assertIn(sm.SurveyPoint.objects.get(pk=f["properties"]["id"]).division_id, allowed)
+
+    def test_login_history_recorded(self):
+        self.client.post("/accounts/login/", {"username": "admin", "password": "sai"})
+        self.client.post("/accounts/login/", {"username": "admin", "password": "Demo@12345"})
+        from accounts.models import LoginHistory
+        self.assertTrue(LoginHistory.objects.filter(username="admin", success=False).exists())
+        self.assertTrue(LoginHistory.objects.filter(username="admin", success=True).exists())
+
+    def test_login_locked_after_too_many_failures(self):
+        """Sai quá ngưỡng phải bị tạm khoá, không cho dò mật khẩu vô hạn."""
+        from accounts.models import LoginHistory
+        from django.conf import settings
+
+        LoginHistory.objects.all().delete()
+        for _ in range(settings.LOGIN_MAX_ATTEMPTS):
+            self.client.post("/accounts/login/", {"username": "admin", "password": "sai"})
+
+        before = LoginHistory.objects.filter(username="admin").count()
+        r = self.client.post("/accounts/login/", {"username": "admin", "password": "Demo@12345"})
+        self.assertEqual(r.status_code, 200, "phải bị chặn, không được chuyển tiếp")
+        self.assertNotIn("_auth_user_id", self.client.session, "không được đăng nhập thành công")
+        # Không sinh thêm bản ghi đăng nhập thành công nào
+        self.assertFalse(LoginHistory.objects.filter(username="admin", success=True,
+                                                     event="login").exists())
+        self.assertGreaterEqual(before, settings.LOGIN_MAX_ATTEMPTS)
+
+
+class ProductionReadinessTests(SeededCase):
+    """Các yêu cầu tối thiểu để chạy thực tế, không phụ thuộc internet."""
+
+    def test_templates_do_not_load_assets_from_cdn(self):
+        """Toàn bộ CSS/JS/font phải tự host — mạng nội bộ thường chặn internet."""
+        import re
+        from pathlib import Path
+
+        from django.conf import settings
+
+        offenders = []
+        for p in Path(settings.BASE_DIR, "templates").rglob("*.html"):
+            txt = p.read_text(encoding="utf-8")
+            for url in re.findall(r'(?:src|href)="(https?://[^"]+)"', txt):
+                # ảnh nền bản đồ thì bắt buộc phải ra internet, chấp nhận
+                if "tile" in url or "openstreetmap" in url:
+                    continue
+                offenders.append(f"{p.name}: {url}")
+        self.assertEqual(offenders, [], "Còn tài nguyên tải từ internet: " + "; ".join(offenders[:5]))
+
+    def test_built_css_exists_and_has_core_classes(self):
+        from pathlib import Path
+
+        from django.conf import settings
+
+        css = Path(settings.BASE_DIR, "static", "css", "app.css")
+        self.assertTrue(css.exists(), "Chưa build Tailwind: chạy npm run build")
+        text = css.read_text(encoding="utf-8", errors="replace")
+        self.assertGreater(len(text), 10_000)
+        for cls in (".bg-surface-container-low", ".text-on-surface-variant", ".tw-input", ".msym"):
+            self.assertIn(cls, text)
+
+    def test_vendor_assets_present(self):
+        from pathlib import Path
+
+        from django.conf import settings
+
+        base = Path(settings.BASE_DIR, "static", "vendor")
+        for rel in ("leaflet/leaflet.js", "leaflet/leaflet.css",
+                    "chartjs/chart.umd.min.js",
+                    "fonts/inter-variable.woff2",
+                    "fonts/material-symbols-outlined.woff2"):
+            self.assertTrue((base / rel).exists(), f"Thiếu tài nguyên tự host: {rel}")
+
+    def test_error_pages_exist(self):
+        from pathlib import Path
+
+        from django.conf import settings
+
+        for name in ("403.html", "404.html", "500.html"):
+            self.assertTrue(Path(settings.BASE_DIR, "templates", name).exists(), name)
+
+    def test_logging_configured(self):
+        from django.conf import settings
+
+        self.assertIn("handlers", settings.LOGGING)
+        self.assertIn("file", settings.LOGGING["handlers"])
+
+
+class SurveyWorkflowTests(SeededCase):
+    def _new_record(self, **kw):
+        pt = sm.SurveyPoint.objects.first()
+        base = dict(point=pt, survey_date=timezone.now(), crop=pt.crop, pest=fm.cat.PestSpecies.objects.get(code="RNN"),
+                    damage_rate=15, density=100, surveyed_area=2, affected_area=0.3, comment="x",
+                    damage_level=fm.cat.DamageLevel.objects.get(code="L2"), surveyor=User.objects.get(username="dieutra1"))
+        base.update(kw)
+        return sm.SurveyRecord.objects.create(**base)
+
+    def test_validation_rules(self):
+        r = self._new_record(damage_rate=150, affected_area=5, survey_date=timezone.now() + timedelta(days=3))
+        errors, _ = r.validate_data()
+        self.assertGreaterEqual(len(errors), 3)
+
+    def test_duplicate_warning(self):
+        a = self._new_record(survey_date=timezone.now())
+        b = self._new_record(survey_date=timezone.now())
+        _, warns = b.validate_data()
+        self.assertTrue(any("trùng lặp" in w for w in warns))
+
+    def test_full_flow_and_history(self):
+        sur, exp = User.objects.get(username="dieutra1"), User.objects.get(username="chuyenmon")
+        r = self._new_record(status="draft")
+        ssv.transition_record(r, "submit", sur)
+        ssv.transition_record(r, "revise", exp, "Bổ sung ảnh")
+        r.refresh_from_db()
+        self.assertEqual(r.status, "revision")
+        ssv.transition_record(r, "submit", sur)
+        ssv.transition_record(r, "confirm", exp)
+        r.refresh_from_db()
+        self.assertEqual((r.status, r.confirmed_by), ("confirmed", exp))
+        self.assertEqual(r.history.count(), 4)
+        with self.assertRaises(ssv.WorkflowError):
+            ssv.transition_record(r, "submit", sur)
+
+    def test_revise_requires_note(self):
+        r = self._new_record(status="submitted")
+        with self.assertRaises(ssv.WorkflowError):
+            ssv.transition_record(r, "revise", User.objects.get(username="chuyenmon"), "")
+
+    def test_sync_api_dedup(self):
+        import json
+        self.login("dieutra1")
+        pt = sm.SurveyPoint.objects.first()
+        payload = {"records": [{"client_uuid": "abc-123", "point": pt.pk, "crop": pt.crop_id,
+                                "pest": fm.cat.PestSpecies.objects.get(code="RNN").pk, "survey_date": timezone.now().isoformat(),
+                                "damage_rate": 5, "density": 10}]}
+        r1 = self.client.post("/surveys/api/sync/", json.dumps(payload), content_type="application/json")
+        r2 = self.client.post("/surveys/api/sync/", json.dumps(payload), content_type="application/json")
+        self.assertEqual(r1.status_code, 200, r1.content)
+        self.assertEqual(r2.status_code, 200, r2.content)
+        self.assertEqual(sm.SurveyRecord.objects.filter(client_uuid="abc-123").count(), 1)
+
+    def test_excel_template_and_import_errors(self):
+        import openpyxl
+        buf = ssv.build_template_xlsx()
+        data = buf.getvalue() if hasattr(buf, "getvalue") else buf
+        wb = openpyxl.load_workbook(io.BytesIO(data))
+        self.assertTrue(wb.sheetnames)
+
+    def test_audit_log_written(self):
+        before = AuditLog.objects.count()
+        self._new_record()
+        self.assertGreater(AuditLog.objects.count(), before)
+
+
+class ForecastAlertTests(SeededCase):
+    def test_auto_suggest_has_evidence_and_needs_confirmation(self):
+        th = fm.Threshold.objects.first()
+        div = th.pest.crops.first() and fm.AdminDivision.objects.get(code="T01")
+        res = fsv.suggest(th, div, User.objects.get(username="chuyenmon"))
+        self.assertTrue(res is not None)
+
+    def test_forecast_flow_and_evaluation(self):
+        fc = fm.Forecast.objects.first()
+        fc.status = "draft"
+        fc.save()
+        exp, appr = User.objects.get(username="chuyenmon"), User.objects.get(username="pheduyet")
+        fsv.transition(fc, "submit", exp)
+        fsv.transition(fc, "confirm", appr)
+        fc.refresh_from_db()
+        self.assertEqual(fc.status, "confirmed")
+        with self.assertRaises(fsv.ForecastError):  # dự báo ở tương lai: chưa có số liệu thực tế để đối chiếu
+            fsv.evaluate_actual(fc, exp)
+        today = timezone.localdate()
+        fc.valid_from, fc.valid_to = today - timedelta(days=30), today
+        fc.save()
+        fsv.evaluate_actual(fc, exp)
+        fc.refresh_from_db()
+        self.assertIsNotNone(fc.evaluated_at)
+
+    def test_alert_requires_confirmed_forecast(self):
+        fc = fm.Forecast.objects.first()
+        fc.status = "draft"
+        fc.save()
+        al = am.Alert.objects.first()
+        al.status, al.forecast = "draft", fc
+        al.save()
+        with self.assertRaises(asv.AlertError):
+            asv.transition(al, "submit", User.objects.get(username="chuyenmon"))
+
+    def test_alert_lifecycle_and_notification(self):
+        al = am.Alert.objects.first()
+        al.status = "draft"
+        al.save()
+        exp, appr = User.objects.get(username="chuyenmon"), User.objects.get(username="pheduyet")
+        asv.transition(al, "submit", exp)
+        self.assertTrue(appr.notifications.filter(title__icontains="phê duyệt").exists())
+        asv.transition(al, "approve", appr)
+        al.refresh_from_db()
+        self.assertEqual(al.status, "published")
+        self.assertTrue(cm.Post.objects.filter(alert=al).exists())
+        asv.transition(al, "expire", appr)
+        al.refresh_from_db()
+        self.assertEqual(al.status, "expired")
+        self.assertGreaterEqual(al.revisions.count(), 3)
+
+
+class ApproveActionTests(SeededCase):
+    """Phê duyệt qua HTTP: nút hiện ra với người có quyền và bấm vào phải chạy (không 403/500)."""
+
+    def _check(self, url, needle, action_url, obj, expect_status, user="pheduyet", data=None):
+        self.login(user)
+        page = self.client.get(url)
+        self.assertEqual(page.status_code, 200, url)
+        self.assertIn(needle, page.content.decode(), f"{url} không hiện nút '{needle}'")
+        r = self.client.post(action_url, data or {})
+        self.assertEqual(r.status_code, 302, action_url)
+        obj.refresh_from_db()
+        self.assertEqual(obj.status, expect_status)
+
+    def test_plan_approve_http(self):
+        plan = sm.SurveyPlan.objects.first()
+        plan.status = "draft"
+        plan.save()
+        self._check(f"/surveys/plans/{plan.pk}/", "Phê duyệt kế hoạch",
+                    f"/surveys/plans/{plan.pk}/action/approve/", plan, "approved")
+
+    def test_alert_approve_http(self):
+        al = am.Alert.objects.first()
+        al.status = "pending"
+        al.save()
+        self._check(f"/alerts/alerts/{al.pk}/", "Phê duyệt &amp; phát hành",
+                    f"/alerts/alerts/{al.pk}/action/approve/", al, "published", data={"note": "ok"})
+
+    def test_forecast_confirm_http(self):
+        fc = fm.Forecast.objects.first()
+        fc.status = "pending"
+        fc.save()
+        self._check(f"/forecasts/forecasts/{fc.pk}/", "Xác nhận nhận định",
+                    f"/forecasts/forecasts/{fc.pk}/action/confirm/", fc, "confirmed", data={"note": "ok"})
+
+    def test_post_approve_http(self):
+        post = cm.Post.objects.first()
+        post.status = "review"
+        post.save()
+        self._check(f"/cms/posts/{post.pk}/", "Duyệt nội dung",
+                    f"/cms/posts/{post.pk}/action/approve/", post, "approved", data={"note": "ok"})
+
+    def test_record_confirm_http(self):
+        rec = sm.SurveyRecord.objects.first()
+        rec.status = "submitted"
+        rec.save()
+        self._check(f"/surveys/records/{rec.pk}/", "Xác nhận dữ liệu",
+                    f"/surveys/records/{rec.pk}/action/confirm/", rec, "confirmed", data={"note": "ok"})
+
+    def test_viewer_cannot_approve(self):
+        al = am.Alert.objects.first()
+        al.status = "pending"
+        al.save()
+        self.login("xem")
+        self.assertEqual(self.client.post(f"/alerts/alerts/{al.pk}/action/approve/", {}).status_code, 403)
+        al.refresh_from_db()
+        self.assertEqual(al.status, "pending")
+
+    def test_plan_approve_blocked_without_routes(self):
+        plan = sm.SurveyPlan.objects.first()
+        plan.status = "draft"
+        plan.save()
+        plan.routes.all().delete()
+        plan.tasks.all().delete()
+        self.login("pheduyet")
+        self.client.post(f"/surveys/plans/{plan.pk}/action/approve/", {})
+        plan.refresh_from_db()
+        self.assertEqual(plan.status, "draft")
+
+
+class ReportAndMapTests(SeededCase):
+    def test_excel_and_pdf_export(self):
+        self.login("admin")
+        for fmt, magic in (("xlsx", b"PK"), ("pdf", b"%PDF")):
+            r = self.client.get(f"/reports/run/BC-PHATSINH/export/{fmt}/")
+            self.assertEqual(r.status_code, 200, fmt)
+            self.assertTrue(b"".join(r.streaming_content if r.streaming else [r.content]).startswith(magic), fmt)
+
+    def test_summary_and_export(self):
+        self.login("admin")
+        self.assertEqual(self.client.get("/reports/summary/?group=month&by=division").status_code, 200)
+        self.assertEqual(self.client.get("/reports/summary/export/?group=month&by=division").status_code, 200)
+
+    def test_schedule_command(self):
+        out = io.StringIO()
+        call_command("run_schedules", "--force", stdout=out)
+
+    def test_geojson_import_export_roundtrip(self):
+        import json
+        self.login("admin")
+        gj = {"type": "FeatureCollection", "features": [
+            {"type": "Feature", "properties": {"code": "GJ1", "name": "Điểm GJ", "division_code": "X011"},
+             "geometry": {"type": "Point", "coordinates": [106.5, 20.5]}},
+            {"type": "Feature", "properties": {"code": "BAD", "name": "x", "division_code": "NOPE"},
+             "geometry": {"type": "Point", "coordinates": [1, 1]}}]}
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        f = SimpleUploadedFile("a.geojson", json.dumps(gj).encode(), content_type="application/json")
+        self.client.post("/map/import/", {"file": f})
+        self.assertTrue(sm.SurveyPoint.objects.filter(code="GJ1").exists())
+        self.assertFalse(sm.SurveyPoint.objects.filter(code="BAD").exists())
+        self.assertEqual(self.client.get("/map/export/").status_code, 200)
+
+    def test_dashboard_has_data(self):
+        self.login("lanhdao")
+        self.assertEqual(self.client.get("/reports/dashboard/").status_code, 200)
+
+
+class CmsTests(SeededCase):
+    def test_editorial_workflow_and_versioning(self):
+        self.login("bientap")
+        r = self.client.post("/cms/posts/new/", {"title": "Bài thử", "post_type": "news", "content": "Nội dung"})
+        self.assertIn(r.status_code, (200, 302))
+        p = cm.Post.objects.filter(title="Bài thử").first()
+        self.assertIsNotNone(p)
+        self.client.post(f"/cms/posts/{p.pk}/action/submit/")
+        p.refresh_from_db()
+        self.assertEqual(p.status, "review")
+        self.client.logout()
+        self.login("pheduyet")
+        self.client.post(f"/cms/posts/{p.pk}/action/approve/")
+        self.client.post(f"/cms/posts/{p.pk}/action/publish/")
+        p.refresh_from_db()
+        self.assertEqual(p.status, "published")
+        self.client.logout()
+        self.assertEqual(self.client.get(f"/tin-tuc/{p.slug}/").status_code, 200)
+        self.assertGreaterEqual(p.revisions.count(), 2)

@@ -1,0 +1,33 @@
+{% load static %}<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hệ thống gặp sự cố — {{ APP_NAME|default:"AgriGov TT&BVTV" }}</title>
+    <link rel="stylesheet" href="{% static 'css/app.css' %}">
+    <style>
+        .msym { font-family: 'Material Symbols Outlined'; font-weight: normal; font-style: normal;
+                line-height: 1; display: inline-block; -webkit-font-feature-settings: 'liga';
+                -webkit-font-smoothing: antialiased; }
+    </style>
+</head>
+<body class="min-h-screen bg-surface flex items-center justify-center p-space-xl">
+<div class="w-full max-w-lg bg-surface-container-lowest rounded-xl shadow-[0_1px_8px_rgba(0,0,0,0.06)] p-space-2xl text-center">
+    <div class="w-16 h-16 mx-auto rounded-full bg-error-container flex items-center justify-center">
+        <span class="msym text-error text-[32px]">report_problem</span>
+    </div>
+    <h1 class="mt-space-lg font-display-sm text-display-sm text-on-surface">Hệ thống gặp sự cố</h1>
+    <p class="mt-space-sm font-body-md text-body-md text-on-surface-variant">
+        Đã xảy ra lỗi ngoài dự kiến. Sự cố đã được ghi nhận tự động.
+        Vui lòng thử lại sau ít phút, hoặc báo cho quản trị viên nếu tình trạng kéo dài.
+    </p>
+    <p class="mt-space-xs font-label-md text-label-md text-outline">Mã lỗi 500 — Internal Server Error</p>
+    <div class="mt-space-xl flex items-center justify-center gap-space-sm">
+        <a href="/"
+           class="h-10 px-space-lg rounded-xl bg-primary hover:bg-primary-container text-white font-label-lg inline-flex items-center gap-1.5">
+            <span class="msym text-[18px]">home</span>Về trang chủ
+        </a>
+    </div>
+</div>
+</body>
+</html>
