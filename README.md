@@ -262,6 +262,13 @@ Toàn bộ giao diện đã dùng Tailwind MD3 — không còn Bootstrap.
 | Quản trị (`sysadmin`) | `/system/` | Nhật ký kiểm toán, lịch sử đăng nhập, sao lưu/khôi phục, tài liệu |
 | Tài khoản (`accounts`) | `/accounts/` | Hồ sơ, đổi mật khẩu, thông báo, ma trận phân quyền RBAC |
 
+### **Tính năng chưa có**
+Để tránh hiểu nhầm khi vận hành, các mục sau **chưa được xây dựng**:
+- Gửi SMS (model `Alert.CHANNELS` chỉ có `web`, `notify`, `email`)
+- Nhận diện qua video / KYC
+- Học máy; dự báo dùng hồi quy tuyến tính trên số liệu điều tra
+- Đăng nhập một lần (SSO/LDAP) với hệ thống của Sở
+
 ### **Ghi chú kỹ thuật**
 - Mọi template kế thừa `base_ui.html` (nội bộ) hoặc `base_public.html` (công khai).
 - Test `test_no_legacy_bootstrap_shell` sẽ fail nếu ai đó tạo lại `base.html` kiểu cũ.
@@ -422,29 +429,44 @@ qs = scope_qs(request.user, SurveyRecord.objects.all(), "point__division")
 
 ---
 
-## 🚢 **DEPLOYMENT**
+## 🚢 **TRIỂN KHAI THỰC TẾ**
 
-### **Production Checklist**
+### **Checklist trước khi mở cho người dùng**
 - [ ] `DJANGO_DEBUG=0` trong `.env`
-- [ ] Đổi `DJANGO_SECRET_KEY` sang chuỗi ngẫu nhiên mạnh
+- [ ] Đổi `DJANGO_SECRET_KEY` sang chuỗi ngẫu nhiên ≥ 50 ký tự
 - [ ] Cấu hình PostgreSQL, đặt `DB_PASSWORD`
-- [ ] `DJANGO_ALLOWED_HOSTS` = domain thật; thêm `DJANGO_CSRF_ORIGINS=https://domain` nếu dùng HTTPS
-- [ ] `python manage.py collectstatic`
-- [ ] Tailwind đang nạp qua CDN — **nên build CSS tĩnh** cho production (xem ghi chú dưới)
+- [ ] `DJANGO_ALLOWED_HOSTS` = domain thật
+- [ ] `.venv\Scripts\python.exe manage.py collectstatic`
+- [ ] Chạy bằng `serve.py` (waitress), **không** dùng `runserver`
 - [ ] Đặt `PG_BIN_DIR` để bật sao lưu/khôi phục bằng `pg_dump`
-- [ ] Đặt `PDF_FONT_PATH` tới font Unicode (vd `C:\Windows\Fonts\arial.ttf`) để PDF tiếng Việt không lỗi dấu
+- [ ] Đặt `PDF_FONT_PATH` tới font Unicode (vd `C:\Windows\Fonts\arial.ttf`)
+- [ ] Điền `EMAIL_HOST`/`EMAIL_USER`/`EMAIL_PASSWORD` nếu dùng cảnh báo qua email
 - [ ] Lên lịch `manage.py run_schedules` mỗi giờ
-- [ ] Backup định kỳ thư mục `media/` và database
+- [ ] Sao lưu định kỳ `media/` và database
+- [ ] Chạy `manage.py test --noinput` trên máy đích — phải xanh toàn bộ
 
-### **Environment Variables**
+### **Chạy bằng WSGI server**
 
-Tên biến phải khớp `config/settings.py`:
+`runserver` chỉ dành cho phát triển. Trên máy thật dùng `serve.py`:
+
+```powershell
+.venv\Scripts\python.exe serve.py
+.venv\Scripts\python.exe serve.py --host 0.0.0.0 --port 8080 --threads 8
+```
+
+Có thể đặt sẵn trong `.env` bằng `SERVE_HOST`, `SERVE_PORT`, `SERVE_THREADS`.
+
+Nếu chạy sau nginx/IIS có TLS, đặt `DJANGO_BEHIND_PROXY=1` để Django nhận đúng giao thức.
+
+### **Biến môi trường**
+
+Tên biến phải khớp `config/settings.py` — xem `.env.example` để có danh sách đầy đủ.
 
 ```ini
-DJANGO_SECRET_KEY=chuoi_ngau_nhien_manh
+DJANGO_SECRET_KEY=chuoi_ngau_nhien_manh_it_nhat_50_ky_tu
 DJANGO_DEBUG=0
-DJANGO_ALLOWED_HOSTS=yourdomain.com,www.yourdomain.com
-DJANGO_CSRF_ORIGINS=https://yourdomain.com
+DJANGO_ALLOWED_HOSTS=bvtv.example.gov.vn
+DJANGO_CSRF_ORIGINS=https://bvtv.example.gov.vn
 
 DB_ENGINE=postgres
 DB_NAME=pest_survey
@@ -453,26 +475,40 @@ DB_PASSWORD=mat_khau_manh
 DB_HOST=localhost
 DB_PORT=5432
 
+LOGIN_MAX_ATTEMPTS=5
+LOGIN_LOCKOUT_SECONDS=900
+
 PG_BIN_DIR=C:\Program Files\PostgreSQL\18\bin
 PDF_FONT_PATH=C:\Windows\Fonts\arial.ttf
 ```
 
 > ⚠️ Khi `DJANGO_DEBUG=0`, settings tự bật `SESSION_COOKIE_SECURE` và `CSRF_COOKIE_SECURE`,
 > nên **bắt buộc phải chạy qua HTTPS**, nếu không sẽ không đăng nhập được.
+> Đây là nguyên nhân phổ biến nhất của lỗi "CSRF verification failed" khi thử nghiệm.
 
-### **Build Tailwind cho production**
+### **Tài nguyên giao diện đã tự host**
 
-Hiện `base_ui.html` và `base_public.html` nạp `https://cdn.tailwindcss.com` — tiện cho dev nhưng
-chậm và phụ thuộc mạng. Khi triển khai thật:
+Toàn bộ CSS, JS và font nằm trong `static/` — **không cần internet**:
+
+| Tài nguyên | Đường dẫn |
+|---|---|
+| Tailwind CSS đã build | `static/css/app.css` |
+| Leaflet 1.9.4 | `static/vendor/leaflet/` |
+| Chart.js 4.4.4 | `static/vendor/chartjs/` |
+| Font Inter + Material Symbols | `static/vendor/fonts/` |
+
+Chỉ **ảnh nền bản đồ** (OpenStreetMap) là cần internet. Nếu mạng nội bộ chặn hoàn toàn,
+cần dựng tile server nội bộ và sửa URL tile trong `templates/mapview/map.html`.
+
+Khi sửa giao diện, phải build lại CSS:
 
 ```powershell
-npm install -D tailwindcss
-npx tailwindcss -i ./static/css/input.css -o ./static/css/tailwind.css --minify
+npm install          # lần đầu
+npm run build        # build một lần
+npm run watch        # theo dõi khi đang sửa
 ```
 
-Rồi thay thẻ `<script src="https://cdn.tailwindcss.com"></script>` trong hai template base
-bằng `<link rel="stylesheet" href="{% static 'css/tailwind.css' %}">`, đồng thời chuyển khối
-`tailwind.config` vào file cấu hình của bước build.
+Thiếu bước này, các class Tailwind mới thêm sẽ **không có tác dụng**.
 
 ---
 
