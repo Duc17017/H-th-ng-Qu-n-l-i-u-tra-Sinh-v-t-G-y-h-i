@@ -45,6 +45,9 @@ class Post(TimeStampedModel):
     alert = models.ForeignKey("alerts.Alert", null=True, blank=True, on_delete=models.SET_NULL, related_name="posts",
                               verbose_name="Bản tin cảnh báo liên quan")
     views = models.PositiveIntegerField("Lượt xem", default=0)
+    # Điểm tin nóng do thuật toán nội bộ tính (cms/insights.py), không nhập tay.
+    hot_score = models.FloatField("Điểm tin nóng", default=0.0, db_index=True)
+    hot_computed_at = models.DateTimeField("Chấm điểm lúc", null=True, blank=True)
 
     class Meta:
         ordering = ["-published_at", "-created_at"]

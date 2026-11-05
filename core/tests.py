@@ -541,5 +541,94 @@ class CmsTests(SeededCase):
         p.refresh_from_db()
         self.assertEqual(p.status, "published")
         self.client.logout()
-        self.assertEqual(self.client.get(f"/tin-tuc/{p.slug}/").status_code, 200)
+        # Khách chưa đăng nhập bị chuyển sang trang đăng nhập, giữ nguyên đích quay lại.
+        guest = self.client.get(f"/tin-tuc/{p.slug}/")
+        self.assertEqual(guest.status_code, 302)
+        self.assertIn("/accounts/login/", guest["Location"])
+        self.assertIn(f"/tin-tuc/{p.slug}/", guest["Location"])
         self.assertGreaterEqual(p.revisions.count(), 2)
+
+
+class PortalGateTests(SeededCase):
+    """Cổng thông tin: khách chỉ thấy tin nổi bật, nội dung bài phải đăng nhập."""
+
+    def setUp(self):
+        super().setUp()
+        self.published = cm.Post.objects.create(
+            title="Tin công khai thử nghiệm", post_type="news", content="Nội dung đầy đủ của tin.",
+            status="published", is_featured=True, published_at=timezone.now())
+
+    def test_guest_home_shows_featured_only(self):
+        r = self.client.get("/")
+        self.assertEqual(r.status_code, 200)
+        self.assertContains(r, "Tin nổi bật")
+        self.assertTrue(r.context["is_guest"])
+        self.assertFalse(r.context["latest"])
+        self.assertIn(self.published, r.context["featured"])
+
+    def test_guest_list_shows_titles_without_body(self):
+        r = self.client.get("/tin-tuc/")
+        self.assertEqual(r.status_code, 200)
+        self.assertContains(r, self.published.title)
+        self.assertNotContains(r, "Nội dung đầy đủ của tin.")
+        self.assertContains(r, "Đăng nhập")
+
+    def test_member_can_read_post(self):
+        self.login("xem")
+        r = self.client.get(f"/tin-tuc/{self.published.slug}/")
+        self.assertEqual(r.status_code, 200)
+        self.assertContains(r, "Nội dung đầy đủ của tin.")
+        self.assertIn("assistant", r.context)
+        self.assertTrue(r.context["assistant"]["summary"])
+
+    def test_viewer_role_sees_latest_list(self):
+        self.login("xem")
+        r = self.client.get("/")
+        self.assertEqual(r.status_code, 200)
+        self.assertFalse(r.context["is_guest"])
+
+    def test_assistant_answers_from_content(self):
+        self.login("xem")
+        r = self.client.post(f"/tin-tuc/{self.published.slug}/hoi-dap/",
+                             {"question": "nội dung của tin là gì"})
+        self.assertEqual(r.status_code, 200)
+        data = r.json()
+        self.assertTrue(data["ok"])
+        self.assertIn("Nội dung", data["answer"])
+
+    def test_assistant_requires_login(self):
+        r = self.client.post(f"/tin-tuc/{self.published.slug}/hoi-dap/", {"question": "abc"})
+        self.assertEqual(r.status_code, 302)
+        self.assertIn("/accounts/login/", r["Location"])
+
+    def test_glossary_matches_whole_words(self):
+        from cms import insights as ins
+
+        post = cm.Post.objects.create(
+            title="Phòng trừ rầy nâu", content="Cần theo dõi ngưỡng kinh tế trước khi phun thuốc.",
+            status="published", post_type="guide")
+        terms = [t["term"] for t in ins.glossary(post)]
+        self.assertIn("Ngưỡng kinh tế", terms)
+        self.assertIn("Rầy nâu", terms)
+
+    def test_hot_score_prefers_recent_featured(self):
+        from cms import insights as ins
+
+        old = cm.Post.objects.create(
+            title="Tin cũ", post_type="news", content="x" * 50, status="published",
+            published_at=timezone.now() - timedelta(days=60))
+        ins.refresh_hot_scores()
+        old.refresh_from_db()
+        self.published.refresh_from_db()
+        self.assertGreater(self.published.hot_score, old.hot_score)
+
+    def test_hot_board_requires_cms_view(self):
+        self.login("xem")
+        self.assertEqual(self.client.get("/cms/hot/").status_code, 200)
+
+    def test_feature_toggle_requires_edit_permission(self):
+        self.login("xem")
+        r = self.client.post(f"/cms/hot/{self.published.pk}/feature/")
+        self.assertEqual(r.status_code, 403)
+        self.published.refresh_from_db()
+        self.assertTrue(self.published.is_featured)

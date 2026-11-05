@@ -43,6 +43,65 @@
                 <div class="prose-vn font-body-lg text-body-lg text-on-surface mt-space-lg whitespace-pre-line">{{ post.content }}</div>
             </div>
         </div>
+
+        {% if assistant %}
+        <section class="bg-white rounded-xl shadow-sm p-space-xl mt-space-lg" aria-labelledby="h-assist">
+            <div class="flex items-center gap-space-sm mb-space-xs">
+                <span class="msym text-[22px] text-primary">neurology</span>
+                <h2 id="h-assist" class="font-headline-sm text-headline-sm text-on-surface">Trợ lý đọc bài</h2>
+            </div>
+            <p class="font-label-sm text-label-sm text-on-surface-variant mb-space-md">
+                Trả lời dựa trên nội dung bài viết này, xử lý ngay trên máy chủ — không gửi dữ liệu ra ngoài.
+            </p>
+
+            {% if assistant.summary %}
+            <div class="bg-surface-container-low rounded-xl p-space-md">
+                <span class="font-label-sm text-label-sm text-primary uppercase">Tóm tắt</span>
+                <p class="font-body-md text-body-md text-on-surface mt-space-xs">{{ assistant.summary }}</p>
+            </div>
+            {% endif %}
+
+            {% if assistant.points %}
+            <details class="mt-space-md" open>
+                <summary class="font-label-lg text-label-lg text-on-surface cursor-pointer">Ý chính</summary>
+                <ul class="mt-space-sm flex flex-col gap-space-xs">
+                    {% for point in assistant.points %}
+                    <li class="flex items-start gap-space-sm font-body-sm text-body-sm text-on-surface">
+                        <span class="msym text-[16px] text-primary mt-0.5 shrink-0">chevron_right</span>
+                        <span>{{ point }}</span>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </details>
+            {% endif %}
+
+            {% if assistant.terms %}
+            <details class="mt-space-md">
+                <summary class="font-label-lg text-label-lg text-on-surface cursor-pointer">Thuật ngữ trong bài</summary>
+                <dl class="mt-space-sm grid grid-cols-1 md:grid-cols-2 gap-space-sm">
+                    {% for t in assistant.terms %}
+                    <div class="bg-surface-container-low rounded-lg p-space-sm">
+                        <dt class="font-label-lg text-label-lg text-primary">{{ t.term }}</dt>
+                        <dd class="font-body-sm text-body-sm text-on-surface-variant mt-0.5">{{ t.meaning }}</dd>
+                    </div>
+                    {% endfor %}
+                </dl>
+            </details>
+            {% endif %}
+
+            <form class="mt-space-md flex flex-col sm:flex-row gap-space-sm"
+                  id="ask-form" data-url="{% url 'cms:post_ask' post.slug %}">
+                {% csrf_token %}
+                <input class="tw-input flex-1" id="ask-q" name="question" autocomplete="off"
+                       aria-label="Câu hỏi về bài viết"
+                       placeholder="Hỏi về nội dung bài viết, ví dụ: nên phun thuốc khi nào?">
+                <button class="h-10 px-space-lg rounded-xl bg-primary hover:bg-primary-container text-white font-label-lg shrink-0" type="submit">
+                    Hỏi trợ lý
+                </button>
+            </form>
+            <div class="mt-space-sm rounded-xl p-space-md bg-surface-container-low hidden" id="ask-out" role="status" aria-live="polite"></div>
+        </section>
+        {% endif %}
     </article>
 
     <aside class="lg:col-span-4 flex flex-col gap-space-lg">
@@ -73,4 +132,60 @@
         </a>
     </aside>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+  var form = document.getElementById("ask-form");
+  if (!form) return;
+  var out = document.getElementById("ask-out");
+  var input = document.getElementById("ask-q");
+  var button = form.querySelector("button[type=submit]");
+
+  form.addEventListener("submit", function (event) {
+    event.preventDefault();
+    var question = input.value.trim();
+    if (!question) {
+      out.hidden = false;
+      out.className = "mt-space-sm rounded-xl p-space-md bg-error-container text-on-error-container";
+      out.textContent = "Nhập câu hỏi trước khi gửi.";
+      return;
+    }
+    button.disabled = true;
+    button.textContent = "Đang tra…";
+    fetch(form.dataset.url, {
+      method: "POST",
+      headers: { "X-CSRFToken": form.querySelector("[name=csrfmiddlewaretoken]").value },
+      body: new URLSearchParams({ question: question })
+    })
+      .then(function (r) { if (!r.ok) throw new Error("bad"); return r.json(); })
+      .then(function (data) {
+        out.hidden = false;
+        if (data.ok) {
+          out.className = "mt-space-sm rounded-xl p-space-md bg-surface-container-low text-on-surface font-body-md";
+          out.textContent = data.answer;
+          if (data.source) {
+            var note = document.createElement("span");
+            note.className = "block mt-2 font-label-sm text-label-sm text-outline";
+            note.textContent = data.source;
+            out.appendChild(note);
+          }
+        } else {
+          out.className = "mt-space-sm rounded-xl p-space-md bg-surface-container text-on-surface-variant font-body-sm";
+          out.textContent = data.answer;
+        }
+      })
+      .catch(function () {
+        out.hidden = false;
+        out.className = "mt-space-sm rounded-xl p-space-md bg-error-container text-on-error-container";
+        out.textContent = "Không gửi được câu hỏi. Kiểm tra kết nối rồi thử lại.";
+      })
+      .finally(function () {
+        button.disabled = false;
+        button.textContent = "Hỏi trợ lý";
+      });
+  });
+})();
+</script>
 {% endblock %}

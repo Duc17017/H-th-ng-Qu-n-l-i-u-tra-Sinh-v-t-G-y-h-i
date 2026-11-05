@@ -1,0 +1,96 @@
+{% extends "base_ui.html" %}
+{% load ui %}
+{% block title %}Tin nóng cổng thông tin{% endblock %}
+
+{% block page_header %}
+<div class="pt-space-md pb-space-lg flex flex-wrap items-end justify-between gap-space-md">
+  <div class="min-w-0">
+    <nav class="flex flex-wrap items-center gap-1 text-on-surface-variant font-label-md mb-space-xs">
+      <a href="{{ home_url }}" class="hover:text-primary">Trang chủ</a>
+      <span class="msym text-[14px] text-outline">chevron_right</span>
+      <span class="text-primary font-semibold">Tin nóng cổng thông tin</span>
+    </nav>
+    <h1 class="font-display-sm text-display-sm text-on-surface tracking-tight">Tin nóng cổng thông tin</h1>
+    <p class="font-body-md text-body-md text-on-surface-variant max-w-4xl mt-space-2xs">
+      Điểm do hệ thống tự tính từ lượt xem, độ mới (giảm một nửa sau {{ half_life|floatformat:0 }} giờ),
+      loại bài và cảnh báo liên quan. Ghim bài để đưa lên khối tin nổi bật của trang chủ công khai.
+    </p>
+  </div>
+  <div class="flex flex-wrap items-center gap-space-sm">
+    <a class="h-10 px-space-md rounded-xl bg-surface-container hover:bg-surface-container-high text-on-surface font-label-lg inline-flex items-center gap-1.5"
+       href="{% url 'cms:home' %}" target="_blank" rel="noopener">
+      <span class="msym text-[18px]">open_in_new</span>Xem cổng thông tin
+    </a>
+    <a class="h-10 px-space-md rounded-xl bg-surface-container hover:bg-surface-container-high text-on-surface font-label-lg inline-flex items-center gap-1.5"
+       href="{% url 'cms:manage_list' %}">
+      <span class="msym text-[18px]">article</span>Quản lý nội dung
+    </a>
+  </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="bg-white rounded-xl shadow-sm overflow-hidden">
+  <div class="overflow-x-auto">
+    <table class="w-full text-left border-collapse">
+      <thead>
+        <tr class="bg-surface-container text-on-surface-variant font-label-sm text-label-sm uppercase tracking-wider">
+          <th class="py-space-sm px-space-md w-12">#</th>
+          <th class="py-space-sm px-space-md">Bài viết</th>
+          <th class="py-space-sm px-space-md">Loại</th>
+          <th class="py-space-sm px-space-md text-right">Lượt xem</th>
+          <th class="py-space-sm px-space-md text-right">Điểm</th>
+          <th class="py-space-sm px-space-md">Ghim</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-outline-variant/30 font-body-sm text-body-sm">
+        {% for p in page %}
+        <tr class="hover:bg-surface-container-low transition-colors">
+          <td class="py-space-sm px-space-md font-data-tabular text-data-tabular text-on-surface-variant">
+            {{ page.start_index|add:forloop.counter0 }}
+          </td>
+          <td class="py-space-sm px-space-md">
+            <a href="{% url 'cms:post_public' p.slug %}" class="font-title-md text-title-md text-on-surface hover:text-primary">{{ p.title }}</a>
+            <div class="font-label-sm text-label-sm text-outline mt-0.5">
+              {{ p.published_at|vn_date }}{% if p.category %} · {{ p.category.name }}{% endif %}
+            </div>
+          </td>
+          <td class="py-space-sm px-space-md">
+            <span class="px-2 py-0.5 rounded-full bg-surface-container text-on-surface-variant font-label-sm">{{ p.get_post_type_display }}</span>
+          </td>
+          <td class="py-space-sm px-space-md text-right font-data-tabular text-data-tabular text-on-surface-variant">{{ p.views }}</td>
+          <td class="py-space-sm px-space-md text-right">
+            <span class="font-title-md text-title-md {% if p.hot_score >= 60 %}text-tertiary{% elif p.hot_score >= 35 %}text-primary{% else %}text-on-surface-variant{% endif %}">
+              {{ p.hot_score|floatformat:1 }}
+            </span>
+          </td>
+          <td class="py-space-sm px-space-md">
+            {% if can_feature %}
+            <form method="post" action="{% url 'cms:hot_toggle_feature' p.pk %}">
+              {% csrf_token %}
+              <input type="hidden" name="next" value="{{ request.get_full_path }}">
+              <button type="submit"
+                      class="h-8 px-space-sm rounded-lg font-label-sm inline-flex items-center gap-1
+                        {% if p.is_featured %}bg-secondary-fixed text-on-secondary-fixed{% else %}bg-surface-container text-on-surface-variant hover:bg-surface-container-high{% endif %}">
+                <span class="msym text-[16px]">{% if p.is_featured %}star{% else %}star_border{% endif %}</span>
+                {% if p.is_featured %}Đang ghim{% else %}Ghim{% endif %}
+              </button>
+            </form>
+            {% else %}
+            <span class="font-label-sm text-label-sm text-outline">{% if p.is_featured %}Đang ghim{% else %}—{% endif %}</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="6" class="py-space-3xl text-center text-on-surface-variant font-body-md">
+            Chưa có bài viết nào được đăng lên cổng thông tin.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% include "partials/pagination.html" %}
+{% endblock %}

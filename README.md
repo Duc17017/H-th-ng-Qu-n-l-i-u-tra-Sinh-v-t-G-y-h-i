@@ -30,7 +30,7 @@ gonstack 2/
 ├── accounts/          # Người dùng, vai trò, đơn vị, địa bàn
 ├── alerts/            # Cảnh báo dịch hại
 ├── catalog/           # Danh mục cây trồng, sinh vật, MSVT
-├── cms/               # Cổng thông tin công cộng
+├── cms/               # Cổng thông tin: bài viết, chấm điểm tin nóng, trợ lý đọc bài
 ├── core/              # Permissions, context processors, templatetags
 ├── forecasts/         # Dự báo & phân tích
 ├── mapview/           # GIS với Leaflet
@@ -154,7 +154,8 @@ Mở trình duyệt:
 
 | URL | Trang |
 |-----|-------|
-| http://localhost:8000/ | Cổng thông tin công khai (không cần đăng nhập) |
+| http://localhost:8000/ | Cổng thông tin — khách chỉ thấy tin nổi bật, cảnh báo, bản tin |
+| http://localhost:8000/tin-tuc/ | Danh sách tin: tiêu đề công khai, nội dung cần đăng nhập |
 | http://localhost:8000/accounts/login/ | Đăng nhập nội bộ |
 | http://localhost:8000/reports/ | Dashboard điều hành (sau khi đăng nhập) |
 | http://localhost:8000/map/ | Bản đồ GIS dịch tễ |

@@ -89,10 +89,10 @@
 
 <!-- MAIN 2-COL -->
 <div class="grid grid-cols-1 lg:grid-cols-12 gap-space-xl">
-    <!-- Tin mới -->
+    <!-- Tin nổi bật -->
     <div class="lg:col-span-8 flex flex-col gap-space-md">
         <div class="flex items-center justify-between">
-            <h2 class="font-headline-lg text-headline-lg text-on-surface">Tin mới</h2>
+            <h2 class="font-headline-lg text-headline-lg text-on-surface">Tin nổi bật</h2>
             <a href="{% url 'cms:post_list' %}" class="font-label-md text-label-md text-primary hover:underline">Xem tất cả →</a>
         </div>
 
@@ -100,11 +100,19 @@
         <div class="grid grid-cols-1 md:grid-cols-2 gap-space-md">
             {% for p in featured %}
             <a href="{% url 'cms:post_public' p.slug %}" class="group bg-white rounded-xl shadow-sm overflow-hidden flex flex-col hover:shadow-md transition-shadow">
+                {% if p.cover %}
+                <img src="{{ p.cover.url }}" alt="{{ p.title }}" loading="lazy" class="h-32 w-full object-cover">
+                {% else %}
                 <div class="h-32 bg-primary-container flex items-center justify-center">
                     <span class="msym text-white/40 text-[48px]">article</span>
                 </div>
+                {% endif %}
                 <div class="p-space-md flex flex-col gap-space-xs">
-                    <span class="font-label-sm text-label-sm text-primary uppercase">{{ p.get_post_type_display }}</span>
+                    <div class="flex items-center gap-1.5">
+                        <span class="font-label-sm text-label-sm text-primary uppercase">{{ p.get_post_type_display }}</span>
+                        {% if p.is_featured %}<span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-tertiary-fixed text-tertiary font-label-sm">
+                            <span class="msym text-[12px]">push_pin</span>Nổi bật</span>{% endif %}
+                    </div>
                     <h3 class="font-headline-sm text-headline-sm text-on-surface group-hover:text-primary transition-colors line-clamp-2">{{ p.title }}</h3>
                     {% if p.summary %}<p class="font-body-sm text-body-sm text-on-surface-variant line-clamp-2">{{ p.summary }}</p>{% endif %}
                     <span class="font-label-sm text-label-sm text-outline mt-auto">{{ p.published_at|vn_date }}</span>
@@ -114,6 +122,20 @@
         </div>
         {% endif %}
 
+        {% if is_guest %}
+        <div class="bg-white rounded-xl shadow-sm p-space-xl flex flex-col items-center text-center gap-space-sm">
+            <span class="msym text-[40px] text-primary/30">lock</span>
+            <h3 class="font-title-lg text-title-lg text-on-surface">Đăng nhập để đọc toàn bộ nội dung</h3>
+            <p class="font-body-sm text-body-sm text-on-surface-variant max-w-lg">
+                Tin tức, bản tin dự tính dự báo và hướng dẫn kỹ thuật đầy đủ dành cho cán bộ
+                và đơn vị trong hệ thống. Cổng thông tin chỉ giới thiệu các tin nổi bật.
+            </p>
+            <a href="{% url 'accounts:login' %}?next={% url 'cms:post_list' %}"
+               class="mt-space-xs h-11 px-space-lg rounded-xl bg-primary hover:bg-primary-container text-white font-label-lg inline-flex items-center gap-1.5">
+                <span class="msym text-[18px]">login</span>Đăng nhập để xem
+            </a>
+        </div>
+        {% else %}
         <div class="bg-white rounded-xl shadow-sm divide-y divide-outline-variant/30 overflow-hidden">
             {% for p in latest %}
             <a href="{% url 'cms:post_public' p.slug %}" class="group p-space-md flex items-start gap-space-md hover:bg-surface-container-low transition-colors">
@@ -138,10 +160,33 @@
             </div>
             {% endfor %}
         </div>
+        {% endif %}
     </div>
 
     <!-- Sidebar -->
     <aside class="lg:col-span-4 flex flex-col gap-space-lg">
+        {% if hot %}
+        <div class="bg-white rounded-xl shadow-sm p-space-lg">
+            <div class="flex items-center gap-space-sm mb-space-md">
+                <span class="msym text-[20px] text-tertiary">local_fire_department</span>
+                <h2 class="font-headline-sm text-headline-sm text-on-surface">Đang được quan tâm</h2>
+            </div>
+            <ol class="flex flex-col gap-space-sm">
+                {% for p in hot %}
+                <li>
+                    <a href="{% url 'cms:post_public' p.slug %}" class="group flex items-start gap-space-sm">
+                        <span class="w-5 h-5 rounded-full bg-tertiary-fixed text-tertiary font-label-sm flex items-center justify-center shrink-0 mt-0.5">{{ forloop.counter }}</span>
+                        <div class="min-w-0">
+                            <span class="block font-body-sm text-body-sm text-on-surface group-hover:text-primary line-clamp-2">{{ p.title }}</span>
+                            <span class="block font-label-sm text-label-sm text-outline">{{ p.views }} lượt xem</span>
+                        </div>
+                    </a>
+                </li>
+                {% endfor %}
+            </ol>
+        </div>
+        {% endif %}
+
         <div class="bg-white rounded-xl shadow-sm p-space-lg">
             <div class="flex items-center gap-space-sm mb-space-md">
                 <span class="msym text-[20px] text-primary">menu_book</span>

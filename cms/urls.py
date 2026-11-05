@@ -14,10 +14,13 @@ urlpatterns = [
     path("", v.home, name="home"),
     path("tin-tuc/", v.post_list, name="post_list"),
     path("tin-tuc/<slug:slug>/", v.post_public, name="post_public"),
+    path("tin-tuc/<slug:slug>/hoi-dap/", v.post_ask, name="post_ask"),
     path("cms/posts/", v.manage_list, name="manage_list"),
     path("cms/posts/new/", v.manage_create, name="manage_create"),
     path("cms/posts/<int:pk>/", v.manage_detail, name="manage_detail"),
     path("cms/posts/<int:pk>/edit/", v.manage_edit, name="manage_edit"),
     path("cms/posts/<int:pk>/action/<str:action>/", v.manage_action, name="manage_action"),
+    path("cms/hot/", v.hot_board, name="hot_board"),
+    path("cms/hot/<int:pk>/feature/", v.hot_toggle_feature, name="hot_toggle_feature"),
 ]
 urlpatterns += categories.urls("cms")
