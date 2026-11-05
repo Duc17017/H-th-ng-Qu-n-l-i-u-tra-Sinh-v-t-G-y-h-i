@@ -326,18 +326,23 @@ ACTIONS = {
 
 ## 📁 **QUAN TRỌNG: FILE CẦN ĐỌC**
 
-1. **`/docs/UI-MOCKUPS-SUMMARY.md`**
+1. **`/docs/TRIEN-KHAI.md`**
+   - Kịch bản triển khai từng bước trên Windows Server
+   - Cài dịch vụ (NSSM), Task Scheduler, sao lưu tự động
+   - Xử lý sự cố và danh sách nghiệm thu
+
+2. **`/docs/UI-MOCKUPS-SUMMARY.md`**
    - Spec đầy đủ 19 mockup
    - Design tokens
    - Mapping mockup → module
    - Priority implementation
 
-2. **`/docs/DEPLOYMENT-STATUS.md`**
-   - Tiến độ hiện tại (30%)
+3. **`/docs/DEPLOYMENT-STATUS.md`**
+   - Tiến độ hiện tại
    - Checklist còn lại
    - Hướng dẫn tiếp tục
 
-3. **`templates/base_ui.html`**
+4. **`templates/base_ui.html`**
    - Master template reference
    - Sidebar navigation
    - Header bar với alerts
