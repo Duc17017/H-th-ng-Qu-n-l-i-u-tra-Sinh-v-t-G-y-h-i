@@ -7,3 +7,4 @@ python-dotenv==1.2.4
 
 # Chạy thực tế (không dùng runserver)
 waitress==3.0.2
+whitenoise==6.9.0

@@ -39,13 +39,38 @@ def main():
     if not args.no_check:
         call_command("check")
 
+    # ── Kiểm tra cấu hình dễ khiến hệ thống không dùng được ─────────────────
+    problems = []
     if not settings.DEBUG and settings.SECRET_KEY.startswith("dev-"):
-        print("CẢNH BÁO: DJANGO_SECRET_KEY vẫn là giá trị mặc định của bản phát triển.")
-        print("         Hãy đổi trong .env trước khi mở cho người dùng thật.")
+        problems.append(
+            "DJANGO_SECRET_KEY vẫn là giá trị mặc định của bản phát triển.\n"
+            "   Hãy đổi trong .env trước khi mở cho người dùng thật."
+        )
+    if not settings.DEBUG and settings.SESSION_COOKIE_SECURE:
+        if not settings.SECURE_SSL_REDIRECT and os.getenv("DJANGO_BEHIND_PROXY") != "1":
+            problems.append(
+                "Cookie phiên đang bật cờ Secure nhưng chưa cấu hình HTTPS.\n"
+                "   Truy cập bằng http:// sẽ KHÔNG ĐĂNG NHẬP ĐƯỢC.\n"
+                "   - Có HTTPS: đặt DJANGO_BEHIND_PROXY=1 (nếu sau nginx/IIS).\n"
+                "   - Không có HTTPS: đặt DJANGO_SECURE_COOKIES=0 để chấp nhận rủi ro."
+            )
+    if not settings.DEBUG and not any(
+            (settings.BASE_DIR / "staticfiles").glob("staticfiles*.json")):
+        problems.append(
+            "Chưa chạy collectstatic. Trang sẽ mất toàn bộ giao diện.\n"
+            "   Chạy: .venv\\Scripts\\python.exe manage.py collectstatic --noinput"
+        )
+    if problems:
+        print("\n" + "=" * 70)
+        for p in problems:
+            print(f"  CẢNH BÁO: {p}")
+        print("=" * 70)
 
     print(f"\n  AgriGov TT&BVTV — http://{args.host}:{args.port}/")
     print(f"  DEBUG={settings.DEBUG}  threads={args.threads}  "
-          f"db={settings.DATABASES['default']['ENGINE'].rsplit('.', 1)[-1]}\n")
+          f"db={settings.DATABASES['default']['ENGINE'].rsplit('.', 1)[-1]}")
+    print(f"  cookie Secure={settings.SESSION_COOKIE_SECURE}  "
+          f"SSL redirect={settings.SECURE_SSL_REDIRECT}\n")
     serve(get_wsgi_application(), host=args.host, port=args.port, threads=args.threads,
           ident="AgriGov")
 

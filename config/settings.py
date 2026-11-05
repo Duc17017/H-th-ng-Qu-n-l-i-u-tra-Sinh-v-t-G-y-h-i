@@ -31,6 +31,9 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    # Phục vụ CSS/JS/font trực tiếp từ Django khi chạy thật (DEBUG=0).
+    # Không có lớp này, toàn bộ giao diện mất style vì Django không tự phục vụ static.
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -89,6 +92,15 @@ STATICFILES_DIRS = [BASE_DIR / "static"]
 STATIC_ROOT = BASE_DIR / "staticfiles"
 MEDIA_URL = "media/"
 MEDIA_ROOT = BASE_DIR / "media"
+
+# WhiteNoise phục vụ file tĩnh cho môi trường thật. Nén sẵn khi collectstatic.
+STORAGES = {
+    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage"
+        if not DEBUG else "django.contrib.staticfiles.storage.StaticFilesStorage",
+    },
+}
 BACKUP_DIR = BASE_DIR / "backups"
 DATA_UPLOAD_MAX_MEMORY_SIZE = 20 * 1024 * 1024
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
@@ -149,12 +161,29 @@ LOGIN_MAX_ATTEMPTS = int(os.getenv("LOGIN_MAX_ATTEMPTS", "5"))
 LOGIN_LOCKOUT_SECONDS = int(os.getenv("LOGIN_LOCKOUT_SECONDS", "900"))
 
 if not DEBUG:
-    SESSION_COOKIE_SECURE = True
-    CSRF_COOKIE_SECURE = True
     SECURE_CONTENT_TYPE_NOSNIFF = True
     SESSION_COOKIE_HTTPONLY = True
     CSRF_COOKIE_HTTPONLY = False  # form đăng nhập cần đọc token bằng JS trong vài trang
     X_FRAME_OPTIONS = "DENY"
+
+# ── HTTPS ────────────────────────────────────────────────────────────────────
+# Mặc định BẬT vì đó là cấu hình đúng cho hệ thống chạy thật qua HTTPS.
+# Nếu triển khai trong mạng nội bộ KHÔNG có TLS, phải đặt DJANGO_SECURE_COOKIES=0,
+# nếu không trình duyệt sẽ từ chối cookie phiên và KHÔNG AI ĐĂNG NHẬP ĐƯỢC.
+# Đặt ngoài khối `if not DEBUG` để luôn có công tắc rõ ràng.
+SECURE_COOKIES = os.getenv("DJANGO_SECURE_COOKIES", "1") == "1"
+if not DEBUG:
+    SESSION_COOKIE_SECURE = SECURE_COOKIES
+    CSRF_COOKIE_SECURE = SECURE_COOKIES
+    if not SECURE_COOKIES:
+        import warnings
+
+        warnings.warn(
+            "DJANGO_SECURE_COOKIES=0: cookie phiên không có cờ Secure. "
+            "Chỉ dùng khi thật sự không có HTTPS. Thông tin đăng nhập có thể bị đánh cắp.",
+            RuntimeWarning,
+        )
+
     SECURE_HSTS_SECONDS = int(os.getenv("DJANGO_HSTS_SECONDS", "0"))
     SECURE_HSTS_INCLUDE_SUBDOMAINS = SECURE_HSTS_SECONDS > 0
     SECURE_HSTS_PRELOAD = False

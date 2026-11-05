@@ -244,6 +244,62 @@ class ProductionReadinessTests(SeededCase):
         self.assertIn("file", settings.LOGGING["handlers"])
 
 
+class ProductionServingTests(SeededCase):
+    """Những lỗi chỉ xuất hiện khi DEBUG=0 — đã từng làm hỏng giao diện và tệp đính kèm."""
+
+    def test_whitenoise_serves_static_when_debug_off(self):
+        """Thiếu WhiteNoise thì CSS 404 và toàn bộ giao diện mất style."""
+        from pathlib import Path
+
+        from django.conf import settings
+
+        self.assertIn("whitenoise.middleware.WhiteNoiseMiddleware", settings.MIDDLEWARE,
+                      "Thiếu WhiteNoise: CSS sẽ 404 khi DEBUG=0")
+        # Bộ lưu trữ phải chọn theo DEBUG: khi chạy thật dùng bản nén của WhiteNoise.
+        src = Path(settings.BASE_DIR, "config", "settings.py").read_text(encoding="utf-8")
+        self.assertIn("whitenoise.storage.CompressedManifestStaticFilesStorage", src)
+
+    def test_uploaded_files_have_route_when_debug_off(self):
+        """Django không tự phục vụ MEDIA khi DEBUG=0; phải có route riêng."""
+        from django.urls import resolve, Resolver404
+
+        try:
+            m = resolve("/media/reports/2026/01/test.xlsx")
+        except Resolver404:
+            self.fail("Không có route /media/ — ảnh hiện trường và tệp báo cáo sẽ 404 khi chạy thật")
+        self.assertEqual(m.func.__name__, "serve_media")
+
+    def test_media_requires_login_for_sensitive_prefixes(self):
+        """Tệp phiếu điều tra / tài liệu / báo cáo không được để người lạ tải."""
+        from core.media import serve_media
+        from django.test import RequestFactory
+        from django.contrib.auth.models import AnonymousUser
+
+        rf = RequestFactory()
+        req = rf.get("/media/records/2026/01/anh.jpg")
+        req.user = AnonymousUser()
+        with self.assertRaises(Exception):
+            serve_media(req, "records/2026/01/anh.jpg")
+
+    def test_media_blocks_path_traversal(self):
+        from core.media import serve_media
+        from django.contrib.auth import get_user_model
+        from django.test import RequestFactory
+
+        rf = RequestFactory()
+        req = rf.get("/media/x")
+        req.user = get_user_model().objects.get(username="admin")
+        with self.assertRaises(Exception):
+            serve_media(req, "../../.env")
+
+    def test_session_cookie_secure_can_be_disabled(self):
+        """Mạng nội bộ không có HTTPS phải tắt được cờ Secure, nếu không không ai đăng nhập được."""
+        from django.conf import settings
+
+        self.assertTrue(hasattr(settings, "SECURE_COOKIES"),
+                        "Thiếu công tắc DJANGO_SECURE_COOKIES cho môi trường không có HTTPS")
+
+
 class SurveyWorkflowTests(SeededCase):
     def _new_record(self, **kw):
         pt = sm.SurveyPoint.objects.first()

@@ -436,7 +436,8 @@ qs = scope_qs(request.user, SurveyRecord.objects.all(), "point__division")
 - [ ] Đổi `DJANGO_SECRET_KEY` sang chuỗi ngẫu nhiên ≥ 50 ký tự
 - [ ] Cấu hình PostgreSQL, đặt `DB_PASSWORD`
 - [ ] `DJANGO_ALLOWED_HOSTS` = domain thật
-- [ ] `.venv\Scripts\python.exe manage.py collectstatic`
+- [ ] `.venv\Scripts\python.exe manage.py collectstatic --noinput` — **bắt buộc**, thiếu là mất giao diện
+- [ ] Quyết định `DJANGO_SECURE_COOKIES` theo việc có HTTPS hay không (xem mục dưới)
 - [ ] Chạy bằng `serve.py` (waitress), **không** dùng `runserver`
 - [ ] Đặt `PG_BIN_DIR` để bật sao lưu/khôi phục bằng `pg_dump`
 - [ ] Đặt `PDF_FONT_PATH` tới font Unicode (vd `C:\Windows\Fonts\arial.ttf`)
@@ -450,13 +451,41 @@ qs = scope_qs(request.user, SurveyRecord.objects.all(), "point__division")
 `runserver` chỉ dành cho phát triển. Trên máy thật dùng `serve.py`:
 
 ```powershell
+.venv\Scripts\python.exe manage.py collectstatic --noinput   # bắt buộc, nếu không giao diện mất style
+```
+
+```powershell
 .venv\Scripts\python.exe serve.py
 .venv\Scripts\python.exe serve.py --host 0.0.0.0 --port 8080 --threads 8
 ```
 
-Có thể đặt sẵn trong `.env` bằng `SERVE_HOST`, `SERVE_PORT`, `SERVE_THREADS`.
+`serve.py` sẽ **cảnh báo ngay khi khởi động** nếu cấu hình sắp khiến hệ thống không dùng được
+(chưa collectstatic, cookie Secure mà không có HTTPS, SECRET_KEY mặc định).
 
-Nếu chạy sau nginx/IIS có TLS, đặt `DJANGO_BEHIND_PROXY=1` để Django nhận đúng giao thức.
+File tĩnh do WhiteNoise phục vụ; tệp tải lên (ảnh hiện trường, tệp báo cáo) do view
+`core/media.py` phục vụ và **yêu cầu đăng nhập**.
+
+### **HTTPS — đọc kỹ trước khi triển khai**
+
+Khi `DJANGO_DEBUG=0`, mặc định cookie phiên có cờ `Secure`, tức là **chỉ gửi qua HTTPS**.
+Nếu bạn chạy bằng `http://`, trình duyệt sẽ từ chối cookie và **không ai đăng nhập được**
+(không có thông báo lỗi rõ ràng, chỉ thấy quay lại trang đăng nhập).
+
+Chọn một trong hai:
+
+| Tình huống | Cấu hình |
+|---|---|
+| Có HTTPS (khuyến nghị) | `DJANGO_SECURE_COOKIES=1`, và `DJANGO_BEHIND_PROXY=1` nếu chạy sau nginx/IIS |
+| Mạng nội bộ không có HTTPS | `DJANGO_SECURE_COOKIES=0` — chấp nhận rủi ro bị đánh cắp phiên |
+
+Sau khi HTTPS chạy ổn định vài tuần, bật thêm `DJANGO_SSL_REDIRECT=1` và
+`DJANGO_HSTS_SECONDS=31536000`.
+
+### **Sự cố đã gặp: database ở "recovery mode"**
+
+Nếu thấy `FATAL: the database system is in recovery mode`, PostgreSQL đang tự khôi phục
+sau khi tắt máy đột ngột. Chờ 1–2 phút rồi thử lại; không cần khởi động lại dịch vụ.
+Trong lúc đó mọi trang sẽ trả lỗi 500.
 
 ### **Biến môi trường**
 
