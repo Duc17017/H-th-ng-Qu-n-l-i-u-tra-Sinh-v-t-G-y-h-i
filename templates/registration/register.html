@@ -1,0 +1,147 @@
+{% extends "base_public.html" %}
+{% block title %}Đăng ký tài khoản{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto py-space-2xl">
+  <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
+    <div class="bg-primary-container p-space-xl flex flex-col items-center gap-space-sm text-white text-center">
+      <div class="w-14 h-14 rounded-2xl bg-white/15 flex items-center justify-center">
+        <span class="msym text-[30px]">person_add</span>
+      </div>
+      <h1 class="font-headline-lg text-headline-lg font-bold">Đăng ký tài khoản người xem</h1>
+      <p class="font-body-sm text-body-sm text-white/80 max-w-lg">
+        Tài khoản này dùng để đọc tin tức, bản tin dự tính dự báo và hướng dẫn kỹ thuật
+        trên cổng thông tin. Không truy cập được dữ liệu điều tra nội bộ.
+      </p>
+    </div>
+
+    <div class="p-space-xl">
+      {% if blocked %}
+      <div class="flex items-start gap-space-sm px-space-md py-space-sm rounded-xl bg-secondary-fixed text-on-secondary-fixed font-body-sm">
+        <span class="msym text-[18px]">info</span>
+        <span>Đã có quá nhiều đăng ký từ địa chỉ này trong một giờ. Vui lòng thử lại sau,
+          hoặc liên hệ Chi cục để được cấp tài khoản.</span>
+      </div>
+      <a href="{% url 'accounts:login' %}" class="mt-space-md h-11 rounded-xl bg-primary text-white font-label-lg inline-flex items-center justify-center w-full">
+        Về trang đăng nhập
+      </a>
+      {% else %}
+
+      <form method="post" novalidate class="flex flex-col gap-space-md">
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{{ next }}">
+
+        {% if form.non_field_errors %}
+        <div class="flex items-start gap-space-sm px-space-md py-space-sm rounded-xl bg-error-container text-on-error-container font-body-sm">
+          <span class="msym text-[18px]">error</span>
+          <div>{% for e in form.non_field_errors %}<div>{{ e }}</div>{% endfor %}</div>
+        </div>
+        {% endif %}
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-space-md">
+          <div class="flex flex-col gap-1">
+            <label class="tw-label" for="{{ form.username.id_for_label }}">Tên đăng nhập <span class="text-error">*</span></label>
+            <input class="tw-input" type="text" name="username" id="{{ form.username.id_for_label }}"
+                   value="{{ form.username.value|default:'' }}" autocomplete="username" autofocus required
+                   placeholder="vd: nguyenvanan">
+            {% for e in form.username.errors %}<span class="font-label-sm text-error">{{ e }}</span>{% endfor %}
+          </div>
+
+          <div class="flex flex-col gap-1">
+            <label class="tw-label" for="{{ form.full_name.id_for_label }}">Họ và tên <span class="text-error">*</span></label>
+            <input class="tw-input" type="text" name="full_name" id="{{ form.full_name.id_for_label }}"
+                   value="{{ form.full_name.value|default:'' }}" autocomplete="name" required
+                   placeholder="Nguyễn Văn A">
+            {% for e in form.full_name.errors %}<span class="font-label-sm text-error">{{ e }}</span>{% endfor %}
+          </div>
+
+          <div class="flex flex-col gap-1">
+            <label class="tw-label" for="{{ form.email.id_for_label }}">Thư điện tử <span class="text-error">*</span></label>
+            <input class="tw-input" type="email" name="email" id="{{ form.email.id_for_label }}"
+                   value="{{ form.email.value|default:'' }}" autocomplete="email" required
+                   placeholder="ten@donvi.gov.vn">
+            {% for e in form.email.errors %}<span class="font-label-sm text-error">{{ e }}</span>{% endfor %}
+          </div>
+
+          <div class="flex flex-col gap-1">
+            <label class="tw-label" for="{{ form.phone.id_for_label }}">Điện thoại</label>
+            <input class="tw-input" type="text" name="phone" id="{{ form.phone.id_for_label }}"
+                   value="{{ form.phone.value|default:'' }}" autocomplete="tel" placeholder="09xx xxx xxx">
+            {% for e in form.phone.errors %}<span class="font-label-sm text-error">{{ e }}</span>{% endfor %}
+          </div>
+        </div>
+
+        <div class="flex flex-col gap-1">
+          <label class="tw-label" for="{{ form.position.id_for_label }}">Chức vụ / đơn vị công tác</label>
+          <input class="tw-input" type="text" name="position" id="{{ form.position.id_for_label }}"
+                 value="{{ form.position.value|default:'' }}"
+                 placeholder="Cán bộ Trạm Trồng trọt và BVTV huyện ...">
+          {% for e in form.position.errors %}<span class="font-label-sm text-error">{{ e }}</span>{% endfor %}
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-space-md">
+          <div class="flex flex-col gap-1">
+            <label class="tw-label" for="{{ form.password1.id_for_label }}">Mật khẩu <span class="text-error">*</span></label>
+            <input class="tw-input" type="password" name="password1" id="{{ form.password1.id_for_label }}"
+                   autocomplete="new-password" required placeholder="Tối thiểu 8 ký tự">
+            {% for e in form.password1.errors %}<span class="font-label-sm text-error">{{ e }}</span>{% endfor %}
+          </div>
+          <div class="flex flex-col gap-1">
+            <label class="tw-label" for="{{ form.password2.id_for_label }}">Nhập lại mật khẩu <span class="text-error">*</span></label>
+            <input class="tw-input" type="password" name="password2" id="{{ form.password2.id_for_label }}"
+                   autocomplete="new-password" required placeholder="Nhập lại mật khẩu">
+            {% for e in form.password2.errors %}<span class="font-label-sm text-error">{{ e }}</span>{% endfor %}
+          </div>
+        </div>
+
+        <div class="hidden" aria-hidden="true">
+          <label for="{{ form.website.id_for_label }}">Website</label>
+          <input type="text" name="website" id="{{ form.website.id_for_label }}" tabindex="-1" autocomplete="off">
+        </div>
+        {% for e in form.website.errors %}<span class="font-label-sm text-error">{{ e }}</span>{% endfor %}
+
+        <label class="flex items-start gap-space-sm font-body-sm text-body-sm text-on-surface cursor-pointer">
+          <input class="mt-0.5" type="checkbox" name="agree" required>
+          <span>Tôi đồng ý với quy định sử dụng của cổng thông tin và đồng ý để hệ thống
+            ghi nhận nhật ký truy cập phục vụ truy vết an toàn thông tin.</span>
+        </label>
+        {% for e in form.agree.errors %}<span class="font-label-sm text-error">{{ e }}</span>{% endfor %}
+
+        <button type="submit"
+                class="h-11 rounded-xl bg-primary hover:bg-primary-container text-white font-label-lg inline-flex items-center justify-center gap-2 mt-space-sm">
+          <span class="msym text-[20px]">person_add</span>Tạo tài khoản
+        </button>
+
+        <p class="font-body-sm text-body-sm text-on-surface-variant text-center">
+          Đã có tài khoản?
+          <a href="{% url 'accounts:login' %}" class="text-primary font-semibold hover:underline">Đăng nhập</a>
+        </p>
+      </form>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="mt-space-lg bg-surface-container rounded-xl p-space-lg">
+    <h2 class="font-label-lg text-label-lg text-on-surface mb-space-xs">Tài khoản người xem được những gì</h2>
+    <ul class="flex flex-col gap-1 font-body-sm text-body-sm text-on-surface-variant">
+      <li class="flex items-start gap-1.5"><span class="msym text-[16px] text-primary mt-0.5">check</span>Đọc toàn bộ tin tức, bản tin dự báo, hướng dẫn kỹ thuật trên cổng thông tin</li>
+      <li class="flex items-start gap-1.5"><span class="msym text-[16px] text-primary mt-0.5">check</span>Dùng trợ lý đọc bài: tóm tắt, ý chính, tra thuật ngữ, hỏi đáp theo nội dung bài</li>
+      <li class="flex items-start gap-1.5"><span class="msym text-[16px] text-primary mt-0.5">check</span>Xem cảnh báo dịch hại đang có hiệu lực và bản tin dự tính dự báo</li>
+      <li class="flex items-start gap-1.5"><span class="msym text-[16px] text-outline mt-0.5">block</span>Không vào được các phân hệ nghiệp vụ: điều tra, bản đồ nội bộ, báo cáo, quản trị</li>
+    </ul>
+    <p class="font-label-sm text-label-sm text-outline mt-space-sm">
+      Cán bộ của Chi cục cần quyền nghiệp vụ, đề nghị liên hệ quản trị viên để được cấp
+      tài khoản theo vai trò công tác.
+    </p>
+  </div>
+</div>
+
+<style>
+  .tw-input { width: 100%; height: 2.75rem; padding: 0 0.75rem; border-radius: 0.5rem;
+              background: #fff; border: 1px solid #becabc; color: #0d1c2f;
+              font-family: Inter; font-size: 14px; outline: none; }
+  .tw-input:focus { border-color: #00652c; box-shadow: 0 0 0 2px rgba(0,101,44,.12); }
+  .tw-label { display: block; font-family: Inter; font-size: 11px; font-weight: 600;
+              letter-spacing: .02em; text-transform: uppercase; color: #3f493f; }
+</style>
+{% endblock %}

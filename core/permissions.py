@@ -28,6 +28,15 @@ def _all():
     return {m: set(ACTIONS) for m in MODULES}
 
 
+# Người tự đăng ký từ cổng thông tin CHỈ được đọc nội dung công khai.
+# Vai trò "viewer" (Người xem) trong ma trận quyền được thiết kế cho cán bộ nội bộ
+# — có cả báo cáo tổng hợp và bản đồ nghiệp vụ. Người ngoài tự đăng ký không được
+# thừa hưởng các quyền đó, nếu không họ sẽ thấy nhiệm vụ quá hạn, số liệu điều tra.
+# Để trống: mọi trang quản trị đều trả 403; họ chỉ dùng được cổng thông tin công khai
+# (cms:home, cms:post_list, cms:post_public) vốn không kiểm tra ma trận quyền.
+PUBLIC_REGISTRANT_MODULES = {}
+
+
 def perm_map(user):
     if not getattr(user, "is_authenticated", False):
         return {}
@@ -36,6 +45,10 @@ def perm_map(user):
         return cached
     if user.is_superuser or user.role == "admin":
         result = _all()
+    elif getattr(user, "self_registered", False):
+        result = {m: set() for m in MODULES}
+        for module, actions in PUBLIC_REGISTRANT_MODULES.items():
+            result[module] = set(actions)
     else:
         from accounts.models import RolePermission
 
@@ -97,6 +110,10 @@ LANDING_ROUTES = [
 def landing_url(user):
     """URL đầu tiên người dùng được phép vào, dùng làm đích sau khi đăng nhập."""
     from django.urls import NoReverseMatch, reverse
+
+    # Người tự đăng ký chỉ đọc tin — đưa về cổng thông tin, không vào trang nội bộ.
+    if getattr(user, "self_registered", False) and not (user.is_superuser or user.role == "admin"):
+        return reverse("cms:home")
 
     for module, action, url_name in LANDING_ROUTES:
         if has_perm(user, module, action):

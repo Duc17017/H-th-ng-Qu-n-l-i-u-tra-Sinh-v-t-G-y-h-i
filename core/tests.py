@@ -632,3 +632,131 @@ class PortalGateTests(SeededCase):
         self.assertEqual(r.status_code, 403)
         self.published.refresh_from_db()
         self.assertTrue(self.published.is_featured)
+
+
+class RegistrationTests(SeededCase):
+    """Người ngoài tự đăng ký rồi đọc tin như một người xem thật."""
+
+    URL = "/accounts/register/"
+
+    def _payload(self, **over):
+        data = {
+            "username": "nguoimoi", "full_name": "Trần Thị Bình",
+            "email": "binhtt@example.gov.vn", "phone": "0901234567",
+            "position": "Cán bộ Trạm", "password1": "MatKhauManh@2026",
+            "password2": "MatKhauManh@2026", "agree": "on", "website": "",
+        }
+        data.update(over)
+        return data
+
+    def test_register_page_opens_for_guest(self):
+        r = self.client.get(self.URL)
+        self.assertEqual(r.status_code, 200)
+        self.assertContains(r, "Đăng ký tài khoản")
+
+    def test_register_creates_viewer_and_logs_in(self):
+        r = self.client.post(self.URL, self._payload(), follow=True)
+        self.assertEqual(r.status_code, 200)
+        user = User.objects.get(username="nguoimoi")
+        # Vai trò bị ép về viewer, không nhận từ POST
+        self.assertEqual(user.role, "viewer")
+        self.assertTrue(user.self_registered)
+        self.assertTrue(user.is_active)
+        self.assertEqual(user.first_name, "Trần Thị Bình")
+        self.assertTrue(r.context["user"].is_authenticated)
+
+    def test_new_user_can_read_article_immediately(self):
+        post = cm.Post.objects.create(
+            title="Tin cho người mới", post_type="news", status="published",
+            content="Nội dung bài viết dành cho người xem mới.", published_at=timezone.now())
+        self.client.post(self.URL, self._payload())
+        r = self.client.get(f"/tin-tuc/{post.slug}/")
+        self.assertEqual(r.status_code, 200)
+        self.assertContains(r, "Nội dung bài viết dành cho người xem mới.")
+
+    def test_role_cannot_be_escalated_via_post(self):
+        self.client.post(self.URL, self._payload(role="admin", is_superuser="1", is_staff="1"))
+        user = User.objects.get(username="nguoimoi")
+        self.assertEqual(user.role, "viewer")
+        self.assertFalse(user.is_superuser)
+        self.assertFalse(user.is_staff)
+
+    def test_duplicate_username_rejected(self):
+        r = self.client.post(self.URL, self._payload(username="xem"))
+        self.assertEqual(r.status_code, 200)
+        self.assertContains(r, "đã được sử dụng")
+
+    def test_duplicate_email_rejected(self):
+        User.objects.create_user(username="khac", email="binhtt@example.gov.vn", password="MatKhauManh@2026")
+        r = self.client.post(self.URL, self._payload())
+        self.assertEqual(r.status_code, 200)
+        self.assertContains(r, "đã được dùng cho một tài khoản khác")
+        self.assertFalse(User.objects.filter(username="nguoimoi").exists())
+
+    def test_weak_password_rejected(self):
+        r = self.client.post(self.URL, self._payload(password1="123", password2="123"))
+        self.assertEqual(r.status_code, 200)
+        self.assertFalse(User.objects.filter(username="nguoimoi").exists())
+
+    def test_must_agree_to_terms(self):
+        r = self.client.post(self.URL, self._payload(agree=""))
+        self.assertEqual(r.status_code, 200)
+        self.assertFalse(User.objects.filter(username="nguoimoi").exists())
+
+    def test_honeypot_blocks_bots(self):
+        r = self.client.post(self.URL, self._payload(website="http://spam.example"))
+        self.assertEqual(r.status_code, 200)
+        self.assertFalse(User.objects.filter(username="nguoimoi").exists())
+
+    def test_registration_can_be_disabled(self):
+        with self.settings(REGISTRATION_OPEN=False):
+            r = self.client.get(self.URL, follow=True)
+            self.assertContains(r, "không mở đăng ký")
+
+    def test_pending_activation_mode(self):
+        with self.settings(REGISTRATION_AUTO_ACTIVE=False):
+            self.client.post(self.URL, self._payload())
+        user = User.objects.get(username="nguoimoi")
+        self.assertFalse(user.is_active)
+        self.assertFalse(self.client.login(username="nguoimoi", password="MatKhauManh@2026"))
+
+    def test_email_domain_restriction(self):
+        with self.settings(REGISTRATION_EMAIL_DOMAINS=["gov.vn"]):
+            r = self.client.post(self.URL, self._payload(email="ai@gmail.com"))
+            self.assertContains(r, "Chỉ chấp nhận thư điện tử thuộc")
+            self.assertFalse(User.objects.filter(username="nguoimoi").exists())
+
+    def test_register_records_login_history_and_audit(self):
+        from accounts.models import LoginHistory
+        from core.models import AuditLog
+
+        self.client.post(self.URL, self._payload())
+        self.assertTrue(LoginHistory.objects.filter(username="nguoimoi", event="register").exists())
+        self.assertTrue(AuditLog.objects.filter(username="nguoimoi", action="register").exists())
+
+    def test_self_registered_user_cannot_reach_internal_modules(self):
+        """Người ngoài tự đăng ký không được thấy dữ liệu vận hành nội bộ."""
+        from core.permissions import perm_map
+
+        self.client.post(self.URL, self._payload())
+        user = User.objects.get(username="nguoimoi")
+        self.assertEqual({k: v for k, v in perm_map(user).items() if v}, {})
+        for url in ("/reports/", "/map/", "/surveys/records/", "/cms/posts/", "/system/"):
+            self.assertEqual(self.client.get(url).status_code, 403, url)
+
+    def test_self_registered_lands_on_portal_not_dashboard(self):
+        from core.permissions import landing_url
+
+        self.client.post(self.URL, self._payload())
+        user = User.objects.get(username="nguoimoi")
+        self.assertEqual(landing_url(user), "/")
+
+    def test_internal_viewer_role_keeps_its_permissions(self):
+        """Tài khoản Người xem do quản trị viên tạo vẫn giữ quyền nội bộ như cũ."""
+        from core.permissions import perm_map
+
+        user = User.objects.get(username="xem")
+        self.assertFalse(user.self_registered)
+        perms = perm_map(user)
+        self.assertIn("view", perms["report"])
+        self.assertIn("view", perms["map"])

@@ -42,11 +42,13 @@ def home(request):
                                        exclude_ids=[p.pk for p in featured])
     pinned = {p.pk for p in featured}
     hot = insights.hot_posts(limit=4, exclude_ids=pinned)
+    # "Tin mới" không lặp lại bài đã nằm trong khối nổi bật / đang quan tâm.
+    shown = pinned | {p.pk for p in hot}
 
     return render(request, "cms/home.html", {
         "featured": featured,
         "hot": hot,
-        "latest": posts[:8] if request.user.is_authenticated else [],
+        "latest": posts.exclude(pk__in=shown)[:8] if request.user.is_authenticated else [],
         "bulletins": posts.filter(post_type__in=["bulletin", "forecast", "advice"])[:5],
         "alerts": Alert.objects.filter(status__in=["published", "updated"], valid_from__lte=today, valid_to__gte=today)
                        .select_related("pest", "crop").prefetch_related("divisions")[:5],

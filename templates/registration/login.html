@@ -44,6 +44,14 @@
         <span class="msym text-[20px]">login</span>Đăng nhập
       </button>
 
+      <div class="flex items-center justify-between gap-space-sm pt-space-sm border-t border-outline-variant/30">
+        <span class="font-body-sm text-body-sm text-on-surface-variant">Chưa có tài khoản?</span>
+        <a href="{% url 'accounts:register' %}{% if next %}?next={{ next|urlencode }}{% endif %}"
+           class="font-label-lg text-label-lg text-primary hover:underline inline-flex items-center gap-1">
+          <span class="msym text-[18px]">person_add</span>Đăng ký ngay
+        </a>
+      </div>
+
       <a href="{% url 'cms:home' %}" class="font-label-md text-label-md text-on-surface-variant hover:text-primary text-center">
         ← Về cổng thông tin công cộng
       </a>

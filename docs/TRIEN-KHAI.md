@@ -189,10 +189,27 @@ Nếu hiện khung **CẢNH BÁO**, đọc kỹ và sửa trước khi tiếp t�
 Mở `http://10.1.2.30:8000/` từ một máy khác trong mạng. Kiểm tra lần lượt:
 
 - [ ] Trang chủ hiện đúng màu xanh, có biểu tượng — nếu chỉ có chữ trơn thì thiếu `collectstatic`
-- [ ] Đăng nhập được bằng tài khoản vừa tạo
-- [ ] Vào được `/reports/dashboard/`
+- [ ] Bấm **Đăng ký** ở góc phải, tạo thử một tài khoản người xem
+- [ ] Sau khi đăng ký, đọc được một bài viết và thấy khối "Trợ lý đọc bài"
+- [ ] Đăng xuất, bấm vào một tin bất kỳ — phải bị chuyển sang trang đăng nhập
+- [ ] Đăng nhập lại bằng tài khoản vừa tạo — phải quay lại đúng bài đang xem
+- [ ] Tài khoản tự đăng ký vào `/reports/` phải nhận trang 403, không lộ số liệu
+- [ ] Đăng nhập bằng tài khoản cán bộ: vào được `/reports/dashboard/`
 - [ ] Mở `/map/` thấy bản đồ (nếu có internet)
 - [ ] Tạo thử một bản ghi bất kỳ rồi xoá
+
+### Quản lý đăng ký người xem
+
+Người ngoài tự đăng ký chỉ có quyền đọc cổng thông tin. Ba công tắc trong `.env`:
+
+| Biến | Mặc định | Ý nghĩa |
+|---|---|---|
+| `REGISTRATION_OPEN` | `1` | `0` để đóng hoàn toàn, chỉ admin tạo tài khoản |
+| `REGISTRATION_AUTO_ACTIVE` | `1` | `0` để tài khoản phải chờ admin kích hoạt |
+| `REGISTRATION_MAX_PER_IP` | `3` | Số đăng ký tối đa một IP/giờ |
+| `REGISTRATION_EMAIL_DOMAINS` | *(trống)* | Chỉ nhận thư thuộc tên miền, vd `gov.vn` |
+
+Xem danh sách người tự đăng ký tại `/accounts/users/?self_registered=True`.
 
 Nếu **đăng nhập xong bị quay lại trang login**: sai `DJANGO_SECURE_COOKIES`. Quay lại mục 0 Câu 1.
 

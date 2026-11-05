@@ -73,6 +73,8 @@ class User(AbstractUser):
                                  verbose_name="Địa bàn phụ trách")
     phone = models.CharField("Điện thoại", max_length=30, blank=True)
     position = models.CharField("Chức vụ", max_length=100, blank=True)
+    self_registered = models.BooleanField("Tự đăng ký", default=False,
+                                          help_text="Tài khoản do người dùng tự tạo từ cổng thông tin.")
 
     class Meta:
         ordering = ["username"]

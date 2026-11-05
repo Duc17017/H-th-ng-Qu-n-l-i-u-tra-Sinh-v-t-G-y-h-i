@@ -18,7 +18,11 @@
 {% if is_guest %}
 <div class="flex items-start gap-space-sm px-space-md py-space-sm rounded-xl bg-surface-container text-on-surface font-body-sm mb-space-lg">
     <span class="msym text-[18px] text-primary">lock</span>
-    <span>Danh sách tiêu đề được xem công khai. <a href="{% url 'accounts:login' %}?next={{ request.get_full_path|urlencode }}" class="text-primary font-semibold hover:underline">Đăng nhập</a> để đọc nội dung đầy đủ từng bài.</span>
+    <span>Danh sách tiêu đề được xem công khai.
+      <a href="{% url 'accounts:login' %}?next={{ request.get_full_path|urlencode }}" class="text-primary font-semibold hover:underline">Đăng nhập</a>
+      hoặc
+      <a href="{% url 'accounts:register' %}?next={{ request.get_full_path|urlencode }}" class="text-primary font-semibold hover:underline">đăng ký tài khoản</a>
+      để đọc nội dung đầy đủ từng bài.</span>
 </div>
 {% endif %}
 

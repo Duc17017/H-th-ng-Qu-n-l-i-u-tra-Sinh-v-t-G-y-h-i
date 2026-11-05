@@ -17,11 +17,12 @@ divisions = Crud("divisions", AdminDivision, DivisionForm, "Địa bàn hành ch
 users = Crud("users", User, UserEditForm, "Người dùng", "system",
              [("Tài khoản", "username"), ("Họ tên", "display_name"), ("Vai trò", "get_role_display"),
               ("Đơn vị", "unit"), ("Hoạt động", "is_active")],
-             search=("username", "first_name", "last_name", "email"), filters=("role", "is_active"),
+             search=("username", "first_name", "last_name", "email"), filters=("role", "is_active", "self_registered"),
              delete=False, select_related=("unit",))
 
 urlpatterns = [
     path("login/", views.SiteLoginView.as_view(), name="login"),
+    path("register/", views.register, name="register"),
     path("logout/", LogoutView.as_view(), name="logout"),
     path("profile/", views.profile, name="profile"),
     path("password/", views.SitePasswordChangeView.as_view(), name="password_change"),

@@ -134,8 +134,18 @@
                class="mt-space-xs h-11 px-space-lg rounded-xl bg-primary hover:bg-primary-container text-white font-label-lg inline-flex items-center gap-1.5">
                 <span class="msym text-[18px]">login</span>Đăng nhập để xem
             </a>
+            <p class="font-body-sm text-body-sm text-on-surface-variant">
+                Chưa có tài khoản?
+                <a href="{% url 'accounts:register' %}?next={% url 'cms:post_list' %}"
+                   class="text-primary font-semibold hover:underline">Đăng ký miễn phí</a>
+                — chỉ mất một phút.
+            </p>
         </div>
         {% else %}
+        {% if latest %}
+        <div class="flex items-center justify-between mt-space-md">
+            <h2 class="font-headline-lg text-headline-lg text-on-surface">Tin mới</h2>
+        </div>
         <div class="bg-white rounded-xl shadow-sm divide-y divide-outline-variant/30 overflow-hidden">
             {% for p in latest %}
             <a href="{% url 'cms:post_public' p.slug %}" class="group p-space-md flex items-start gap-space-md hover:bg-surface-container-low transition-colors">
@@ -160,6 +170,7 @@
             </div>
             {% endfor %}
         </div>
+        {% endif %}
         {% endif %}
     </div>
 

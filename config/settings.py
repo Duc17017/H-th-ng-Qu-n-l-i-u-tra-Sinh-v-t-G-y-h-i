@@ -160,6 +160,19 @@ LOGGING = {
 LOGIN_MAX_ATTEMPTS = int(os.getenv("LOGIN_MAX_ATTEMPTS", "5"))
 LOGIN_LOCKOUT_SECONDS = int(os.getenv("LOGIN_LOCKOUT_SECONDS", "900"))
 
+# ── Đăng ký tài khoản từ cổng thông tin ───────────────────────────────────────
+# Người tự đăng ký LUÔN chỉ là vai trò "viewer" (Người xem); không có cách nào
+# tự nâng quyền qua form. Tài khoản tạo ra dùng ngay được đọc tin, không đụng
+# tới dữ liệu điều tra.
+REGISTRATION_OPEN = os.getenv("REGISTRATION_OPEN", "1") == "1"
+# False = tài khoản phải chờ quản trị viên kích hoạt mới đăng nhập được.
+REGISTRATION_AUTO_ACTIVE = os.getenv("REGISTRATION_AUTO_ACTIVE", "1") == "1"
+# Số lần đăng ký tối đa từ một IP trong một giờ (chống spam).
+REGISTRATION_MAX_PER_IP = int(os.getenv("REGISTRATION_MAX_PER_IP", "3"))
+# Để trống = nhận mọi tên miền; ví dụ "gov.vn,chicucttbvt.vn" = chỉ nhận nội bộ.
+REGISTRATION_EMAIL_DOMAINS = [
+    d.strip().lower() for d in os.getenv("REGISTRATION_EMAIL_DOMAINS", "").split(",") if d.strip()]
+
 if not DEBUG:
     SECURE_CONTENT_TYPE_NOSNIFF = True
     SESSION_COOKIE_HTTPONLY = True

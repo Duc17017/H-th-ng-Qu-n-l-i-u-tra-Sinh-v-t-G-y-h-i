@@ -1,17 +1,20 @@
 import logging
+from datetime import timedelta
 
 from django.conf import settings
 from django.contrib import messages
+from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.views import LoginView, PasswordChangeView
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse_lazy
+from django.utils import timezone
 
-from core.models import Notification
+from core.models import AuditLog, Notification
 from core.permissions import ACTIONS, MODULES, landing_url, perm_required
 from . import lockout
-from .forms import ProfileForm
-from .models import RolePermission, User
+from .forms import ProfileForm, RegistrationForm
+from .models import LoginHistory, RolePermission, User
 
 logger = logging.getLogger(__name__)
 
@@ -50,6 +53,51 @@ def _client_ip(request):
     if forwarded:
         return forwarded.split(",")[0].strip()
     return request.META.get("REMOTE_ADDR")
+
+
+def register(request):
+    """Đăng ký công khai — chỉ tạo được tài khoản Người xem.
+
+    An toàn:
+        * Vai trò bị ép về `viewer` trong form, không nhận từ POST.
+        * Khoá theo IP nếu đăng ký quá nhiều trong một giờ (chống spam).
+        * Ghi LoginHistory + AuditLog để truy vết.
+        * Có thể tắt hoàn toàn bằng REGISTRATION_OPEN=0.
+    """
+    if not getattr(settings, "REGISTRATION_OPEN", True):
+        messages.error(request, "Cổng thông tin hiện không mở đăng ký. Vui lòng liên hệ Chi cục để được cấp tài khoản.")
+        return redirect("accounts:login")
+
+    if request.user.is_authenticated:
+        return redirect(landing_url(request.user))
+
+    ip = _client_ip(request)
+    limit = getattr(settings, "REGISTRATION_MAX_PER_IP", 3)
+    if ip and LoginHistory.objects.filter(
+            event="register", ip_address=ip,
+            created_at__gte=timezone.now() - timedelta(hours=1)).count() >= limit:
+        messages.error(request, "Đã có quá nhiều đăng ký từ địa chỉ này trong một giờ. Vui lòng thử lại sau.")
+        logger.warning("Chặn đăng ký quá nhiều: ip=%s", ip)
+        return render(request, "registration/register.html", {"form": RegistrationForm(), "blocked": True})
+
+    form = RegistrationForm(request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        user = form.save()
+        LoginHistory.objects.create(
+            user=user, username=user.username, success=True, event="register", ip_address=ip,
+            user_agent=(request.META.get("HTTP_USER_AGENT") or "")[:255])
+        AuditLog.objects.create(
+            user=user, username=user.username, action="register", model_label="accounts.User",
+            object_id=str(user.pk), object_repr=user.display_name,
+            note="Tự đăng ký từ cổng thông tin", ip_address=ip)
+        if user.is_active:
+            login(request, user, backend="django.contrib.auth.backends.ModelBackend")
+            messages.success(request, "Đã tạo tài khoản. Bạn có thể đọc toàn bộ nội dung cổng thông tin.")
+            return redirect(request.POST.get("next") or "cms:post_list")
+        messages.success(request, "Đã gửi đăng ký. Tài khoản sẽ dùng được sau khi quản trị viên kích hoạt.")
+        return redirect("accounts:login")
+
+    return render(request, "registration/register.html", {"form": form, "next": request.GET.get("next", "")})
 
 
 class SitePasswordChangeView(PasswordChangeView):
