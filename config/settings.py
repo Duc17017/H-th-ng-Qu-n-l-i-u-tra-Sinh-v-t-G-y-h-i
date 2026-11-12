@@ -59,7 +59,12 @@ TEMPLATES = [{
 }]
 
 # Cơ sở dữ liệu: PostgreSQL (mặc định). DB_ENGINE=sqlite chỉ dùng để thử nhanh.
-if os.getenv("DB_ENGINE", "postgres") == "sqlite":
+# Trên Render: sẽ cấp DATABASE_URL (tự động resolve từ internal postgres service)
+if os.getenv("DATABASE_URL"):
+    # Render cung cấp DATABASE_URL, parse nó
+    import dj_database_url
+    DATABASES = {"default": dj_database_url.config(conn_max_age=600, conn_health_checks=True)}
+elif os.getenv("DB_ENGINE", "postgres") == "sqlite":
     DATABASES = {"default": {"ENGINE": "django.db.backends.sqlite3", "NAME": BASE_DIR / "db.sqlite3"}}
 else:
     DATABASES = {"default": {
