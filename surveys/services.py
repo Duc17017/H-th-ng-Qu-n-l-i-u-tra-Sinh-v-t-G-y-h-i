@@ -1,4 +1,4 @@
-﻿"""Nghiệp vụ điều tra: chuyển trạng thái phiếu/nhiệm vụ, nhập Excel, sinh nhiệm vụ."""
+"""Nghiệp vụ điều tra: chuyển trạng thái phiếu/nhiệm vụ, nhập Excel, sinh nhiệm vụ."""
 import datetime as dt
 import io
 

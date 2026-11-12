@@ -58,8 +58,12 @@ class Post(TimeStampedModel):
         return self.title
 
     def save(self, *args, **kwargs):
+        # Đường dẫn luôn được chuẩn hoá: slug do người dùng nhập cũng phải an toàn
+        # cho URL, nếu không reverse() sẽ không tìm được bài và cổng thông tin lỗi.
+        if self.slug:
+            self.slug = slugify(self.slug.replace("đ", "d").replace("Đ", "D"))[:200]
         if not self.slug:
-            base = slugify(self.title)[:200] or "bai-viet"
+            base = slugify(self.title.replace("đ", "d").replace("Đ", "D"))[:200] or "bai-viet"
             slug, i = base, 1
             while Post.objects.filter(slug=slug).exclude(pk=self.pk).exists():
                 i += 1

@@ -69,8 +69,10 @@ def _sentences(text: str) -> list[str]:
 
 
 def _plain(post) -> str:
-    """Văn bản thuần của bài: tóm tắt + nội dung, đã bỏ ký tự trang trí."""
-    return f"{post.summary or ''}\n{post.content or ''}".strip()
+    """Văn bản thuần của bài: tóm tắt + nội dung, đã bỏ ký tự định dạng."""
+    from core.textfmt import strip_markdown
+
+    return strip_markdown(f"{post.summary or ''}\n{post.content or ''}").strip()
 
 
 # ─── 1. xếp hạng tin ──────────────────────────────────────────────────────────
@@ -312,8 +314,12 @@ def answer(post, question: str) -> dict:
         overlap = len(q_tokens & s_tokens)
         if not overlap:
             continue
-        # ưu tiên câu chứa nhiều từ khoá và không quá dài
+        # ưu tiên câu chứa nhiều từ khoá, đủ dài để có nghĩa và không quá dài
         value = overlap / math.sqrt(len(s_tokens)) * (1.0 + 0.4 / (1 + idx))
+        if len(sentence) < 50:
+            value *= 0.45
+        # Câu có dấu kết câu là câu văn đầy đủ; mảnh bảng, tiêu đề mục thì không.
+        value *= 1.1 if sentence.endswith((".", "!", "?")) else 0.55
         if value > best:
             best, best_idx = value, idx
 

@@ -33,6 +33,17 @@ def app_context(request):
     ctx["current_season"] = SimpleLazyObject(_current_season)
     if user is not None and user.is_authenticated:
         ctx["home_url"] = SimpleLazyObject(lambda: landing_url(user))
+        # Chỉ người có ít nhất một quyền trong hệ thống mới thấy lối vào nghiệp vụ.
+        # Người xem tự đăng ký từ cổng thông tin có perm_map rỗng — nếu vẫn hiện
+        # nút "Vào hệ thống" thì họ bấm vào chỉ nhận 403, rất khó hiểu.
+        # perms_map đã được tính ngay phía trên nên kiểm tra này không thêm truy vấn.
+        ctx["has_backoffice"] = any(ctx["perms_map"].values())
+        # Trang tài khoản (hồ sơ, đổi mật khẩu, thông báo) dùng chung cho cả hai nhóm:
+        # người nghiệp vụ ở trong khung quản trị, người đọc tin ở khung cổng thông tin.
+        # Đây là TÊN TEMPLATE nên phải là str thật — SimpleLazyObject làm safe_join nổ.
+        ctx["base_account"] = "base_ui.html" if ctx["has_backoffice"] else "base_public.html"
     else:
         ctx["home_url"] = "/"
+        ctx["has_backoffice"] = False
+        ctx["base_account"] = "base_public.html"
     return ctx

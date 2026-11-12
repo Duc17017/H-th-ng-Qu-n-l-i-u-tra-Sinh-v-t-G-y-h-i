@@ -1,4 +1,4 @@
-﻿"""Phân tích dữ liệu điều tra: tổng hợp, so sánh kỳ, xu hướng. Chỉ dùng phiếu đã xác nhận."""
+"""Phân tích dữ liệu điều tra: tổng hợp, so sánh kỳ, xu hướng. Chỉ dùng phiếu đã xác nhận."""
 import datetime as dt
 
 from django.db.models import Avg, Count, F, Max, Sum

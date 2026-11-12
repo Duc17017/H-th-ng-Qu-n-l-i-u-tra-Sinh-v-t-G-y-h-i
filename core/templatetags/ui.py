@@ -4,6 +4,8 @@ from django import template
 from django.utils import timezone
 from django.utils.safestring import mark_safe
 
+from core import textfmt
+
 register = template.Library()
 
 
@@ -201,3 +203,27 @@ def field_widget(field, css="tw-input"):
     except AttributeError:
         pass
     return field
+
+
+
+
+# ─────────────────────────── dựng nội dung bài viết ──────────────────────────
+# Bài viết lưu văn bản thuần; cú pháp trình bày và cách escape nằm ở core/textfmt.py.
+
+
+@register.filter
+def article_html(text):
+    """Dựng nội dung bài viết có cấu trúc (tiêu đề mục, danh sách, bảng, trích dẫn)."""
+    return mark_safe(textfmt.render_article(text)[0])
+
+
+@register.filter
+def article_sections(text):
+    """Mục lục của bài, dùng cho menu đầu bài."""
+    return textfmt.outline(text)
+
+
+@register.filter
+def reading_minutes(text):
+    """Ước tính thời gian đọc bài (phút)."""
+    return textfmt.reading_minutes(text)

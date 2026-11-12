@@ -1,10 +1,11 @@
 """Kiểm thử tự động: chạy `python manage.py test` (đặt DB_ENGINE=sqlite để thử nhanh)."""
 import io
+import tempfile
 from datetime import timedelta
 
 from django.conf import settings
 from django.core.management import call_command
-from django.test import TestCase
+from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
@@ -18,8 +19,18 @@ from forecasts import services as fsv
 from surveys import models as sm
 from surveys import services as ssv
 
+# Thư mục media riêng cho kiểm thử, tránh ghi ảnh đại diện vào media/ thật.
+TEST_MEDIA_ROOT = tempfile.mkdtemp(prefix="agrigov-test-media-")
 
+
+@override_settings(MEDIA_ROOT=TEST_MEDIA_ROOT)
 class SeededCase(TestCase):
+    """Nền chung: nạp dữ liệu mẫu một lần cho cả lớp kiểm thử.
+
+    Thư mục media được chuyển sang thư mục tạm để ảnh đại diện do seeder sinh ra
+    không ghi vào media/ thật của dự án mỗi lần chạy `manage.py test`.
+    """
+
     @classmethod
     def setUpTestData(cls):
         call_command("seed_demo", stdout=io.StringIO())
@@ -374,7 +385,9 @@ class ForecastAlertTests(SeededCase):
         self.assertTrue(res is not None)
 
     def test_forecast_flow_and_evaluation(self):
-        fc = fm.Forecast.objects.first()
+        # Chọn đúng nhận định rầy nâu: bộ nội dung mẫu có thêm dự báo sâu keo ngô
+        # nên không thể dựa vào thứ tự mặc định của queryset.
+        fc = fm.Forecast.objects.filter(pest__code="RNN").first()
         fc.status = "draft"
         fc.save()
         exp, appr = User.objects.get(username="chuyenmon"), User.objects.get(username="pheduyet")
@@ -557,6 +570,10 @@ class PortalGateTests(SeededCase):
         self.published = cm.Post.objects.create(
             title="Tin công khai thử nghiệm", post_type="news", content="Nội dung đầy đủ của tin.",
             status="published", is_featured=True, published_at=timezone.now())
+        # Người xem tự đăng ký từ cổng thông tin: vai trò viewer nhưng KHÔNG
+        # thừa hưởng quyền nghiệp vụ của vai trò đó (xem core/permissions.py).
+        self.reader = User.objects.create_user(
+            username="docgia", password="Demo@12345", role="viewer", self_registered=True)
 
     def test_guest_home_shows_featured_only(self):
         r = self.client.get("/")
@@ -572,6 +589,61 @@ class PortalGateTests(SeededCase):
         self.assertContains(r, self.published.title)
         self.assertNotContains(r, "Nội dung đầy đủ của tin.")
         self.assertContains(r, "Đăng nhập")
+
+    def test_guest_has_no_logout_button(self):
+        """Khách chưa đăng nhập không được thấy nút Đăng xuất."""
+        r = self.client.get("/")
+        self.assertEqual(r.status_code, 200)
+        self.assertNotContains(r, "/accounts/logout/")
+
+    def test_member_sees_logout_button(self):
+        """Đã đăng nhập phải có nút Đăng xuất, nếu không người dùng bị kẹt
+        trong phiên và luôn đọc được bài dù tưởng mình là khách."""
+        self.login("xem")
+        r = self.client.get("/")
+        self.assertEqual(r.status_code, 200)
+        self.assertContains(r, "/accounts/logout/")
+        self.assertContains(r, "Đăng xuất")
+
+    def test_logout_button_ends_gate_bypass(self):
+        """Bấm Đăng xuất xong thì đọc bài lại bị chặn — đúng yêu cầu."""
+        self.login("xem")
+        self.assertEqual(self.client.get(f"/tin-tuc/{self.published.slug}/").status_code, 200)
+        resp = self.client.post("/accounts/logout/")
+        self.assertIn(resp.status_code, (200, 302))
+        guest = self.client.get(f"/tin-tuc/{self.published.slug}/")
+        self.assertEqual(guest.status_code, 302)
+        self.assertIn("/accounts/login/", guest["Location"])
+
+    def test_reader_account_uses_public_shell(self):
+        """Người tự đăng ký chỉ đọc tin: trang tài khoản nằm trong khung cổng
+        thông tin, không phải khung quản trị trống trơn."""
+        self.login("docgia")
+        r = self.client.get("/accounts/profile/")
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.context["base_account"], "base_public.html")
+        self.assertFalse(r.context["has_backoffice"])
+        body = r.content.decode()
+        self.assertNotIn("ui-nav", body)          # không có sidebar nghiệp vụ
+        self.assertIn("Cổng thông tin công cộng", body)
+        self.assertIn("Đăng xuất", body)
+
+    def test_reader_does_not_get_backoffice_link(self):
+        """Không có quyền nào thì không được mời 'Vào hệ thống' (bấm vào chỉ 403)."""
+        c = Client()
+        c.force_login(self.reader)
+        body = c.get("/").content.decode()
+        self.assertNotIn("Vào hệ thống nghiệp vụ", body)
+        self.assertIn("Tài khoản đọc tin", body)
+
+    def test_staff_account_keeps_admin_shell(self):
+        """Cán bộ nghiệp vụ vẫn dùng khung quản trị có sidebar như trước."""
+        self.login("bientap")
+        r = self.client.get("/accounts/profile/")
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.context["base_account"], "base_ui.html")
+        self.assertTrue(r.context["has_backoffice"])
+        self.assertIn("ui-nav", r.content.decode())
 
     def test_member_can_read_post(self):
         self.login("xem")
@@ -760,3 +832,125 @@ class RegistrationTests(SeededCase):
         perms = perm_map(user)
         self.assertIn("view", perms["report"])
         self.assertIn("view", perms["map"])
+
+
+class ContentSeedTests(SeededCase):
+    """Bộ nội dung thực tế phải đủ dày để cổng thông tin đọc được ngay."""
+
+    def test_seed_content_creates_full_portal(self):
+        posts = cm.Post.objects.filter(status="published")
+        self.assertGreaterEqual(posts.count(), 15)
+        # Đủ loại bài để mọi mục trên menu đều có nội dung
+        for ptype in ("news", "guide", "bulletin", "forecast", "situation", "advice", "notice"):
+            self.assertTrue(posts.filter(post_type=ptype).exists(), ptype)
+
+    def test_alerts_seeded_with_risk_levels(self):
+        self.assertGreaterEqual(am.Alert.objects.filter(status="published").count(), 4)
+        self.assertTrue(am.Alert.objects.filter(risk_level="very_high").exists())
+        self.assertTrue(am.FollowUpTask.objects.exists())
+
+    def test_every_article_has_summary_and_cover(self):
+        for p in cm.Post.objects.filter(status="published"):
+            self.assertTrue(p.summary.strip(), p.slug)
+            self.assertTrue(p.cover, p.slug)
+            self.assertGreater(len(p.content), 500, p.slug)
+
+    def test_slug_is_url_safe(self):
+        """Slug có dấu hoặc ký tự lạ sẽ làm reverse() hỏng cả trang chủ."""
+        import re
+
+        for p in cm.Post.objects.all():
+            self.assertRegex(p.slug, r"^[-a-zA-Z0-9_]+$", p.slug)
+            reverse("cms:post_public", args=[p.slug])
+
+    def test_slug_is_normalised_on_save(self):
+        post = cm.Post.objects.create(title="Bệnh đạo ôn", slug="Tình hình Đạo ôn 2026!",
+                                      content="Nội dung", status="draft")
+        self.assertRegex(post.slug, r"^[-a-zA-Z0-9_]+$")
+
+    def test_seed_content_is_idempotent(self):
+        before = cm.Post.objects.count()
+        call_command("seed_content", stdout=io.StringIO())
+        self.assertEqual(cm.Post.objects.count(), before)
+
+    def test_article_body_renders_structure(self):
+        from core import textfmt
+
+        html, headings = textfmt.render_article(
+            "## Mục một\nNội dung **đậm**.\n\n- ý a\n- ý b\n\n| A | B |\n|---|---|\n| 1 | 2 |\n")
+        self.assertIn("<h2", html)
+        self.assertIn("<strong>đậm</strong>", html)
+        self.assertIn("<ul", html)
+        self.assertIn("<table", html)
+        self.assertEqual(headings[0][1], "Mục một")
+
+    def test_article_renderer_escapes_unsafe_html(self):
+        from core import textfmt
+
+        html, _ = textfmt.render_article('## <script>alert(1)</script>\n<img src=x onerror=alert(1)>')
+        self.assertNotIn("<script>", html)
+        self.assertNotIn("<img", html)
+        self.assertIn("&lt;script&gt;", html)
+        self.assertIn("&lt;img", html)
+
+    def test_outline_matches_rendered_anchors(self):
+        from core import textfmt
+
+        text = "## Một mục\nnội dung\n\n## Một mục\nnội dung khác"
+        html, headings = textfmt.render_article(text)
+        items = textfmt.outline(text)
+        self.assertEqual([h[0] for h in headings], [i["id"] for i in items])
+        for item in items:
+            self.assertIn(f'id="{item["id"]}"', html)
+
+    def test_plain_text_conversion_for_analysis(self):
+        """Bộ phân tích chỉ đọc phần chữ, bảng phải thành câu tra cứu được."""
+        from core import textfmt
+
+        plain = textfmt.strip_markdown("## Tiêu đề\n| Chỉ tiêu | Tuần 44 |\n|---|---|\n| Mật độ | 1.850 |")
+        self.assertIn("Mật độ", plain)
+        self.assertIn("1.850", plain)
+        self.assertNotIn("|", plain)
+        self.assertNotIn("##", plain)
+
+    def test_portal_lists_all_content_types(self):
+        self.login("xem")
+        for ptype in ("news", "guide", "bulletin", "forecast", "situation", "advice", "notice"):
+            r = self.client.get(f"/tin-tuc/?type={ptype}")
+            self.assertEqual(r.status_code, 200)
+            self.assertGreater(r.context["page"].paginator.count, 0, ptype)
+
+    def test_article_page_shows_toc_and_reading_time(self):
+        self.login("xem")
+        post = cm.Post.objects.get(slug="quy-trinh-phong-tru-benh-dao-on")
+        r = self.client.get(f"/tin-tuc/{post.slug}/")
+        self.assertEqual(r.status_code, 200)
+        self.assertGreaterEqual(len(r.context["sections"]), 2)
+        self.assertGreaterEqual(r.context["reading_minutes"], 1)
+        self.assertContains(r, "Nội dung bài viết")
+
+    def test_home_shows_river_and_categories_with_counts(self):
+        r = self.client.get("/")
+        self.assertContains(r, "Tin nổi bật")
+        self.assertGreaterEqual(len(r.context["featured"]), 4)
+        self.assertTrue(r.context["guides"])
+        for c in r.context["categories"]:
+            self.assertGreater(c.published, 0, c.slug)
+
+    def test_assistant_reads_seeded_article(self):
+        self.login("xem")
+        post = cm.Post.objects.get(slug="quy-trinh-phong-tru-benh-dao-on")
+        r = self.client.post(f"/tin-tuc/{post.slug}/hoi-dap/",
+                             {"question": "khi nào phun phòng đạo ôn cổ bông"})
+        data = r.json()
+        self.assertTrue(data["ok"])
+        self.assertIn("cổ bông", data["answer"].lower())
+
+    def test_seeded_articles_ranked_by_hot_score(self):
+        from cms import insights
+
+        insights.refresh_hot_scores()
+        top = insights.hot_posts(limit=3)
+        self.assertEqual(len(top), 3)
+        # Bài gắn cảnh báo đang hiệu lực và nhiều lượt xem phải nằm trong nhóm đầu
+        self.assertIn("du-bao-ray-nau-hai-tuan-toi", [p.slug for p in top])

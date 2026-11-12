@@ -97,25 +97,53 @@
         </div>
 
         {% if featured %}
+        {% with lead=featured.0 %}
+        <a href="{% url 'cms:post_public' lead.slug %}"
+           class="group bg-white rounded-xl shadow-sm overflow-hidden flex flex-col hover:shadow-md transition-shadow">
+            <div class="relative">
+                {% if lead.cover %}
+                <img src="{{ lead.cover.url }}" alt="{{ lead.title }}" class="w-full h-56 md:h-72 object-cover">
+                {% else %}
+                <div class="w-full h-56 md:h-72 bg-primary-container flex items-center justify-center">
+                    <span class="msym text-white/40 text-[64px]">article</span>
+                </div>
+                {% endif %}
+                <span class="absolute top-space-md left-space-md inline-flex px-2.5 py-1 rounded-full bg-primary text-white font-label-sm uppercase tracking-wide">
+                    {{ lead.get_post_type_display }}
+                </span>
+            </div>
+            <div class="p-space-lg flex flex-col gap-space-xs">
+                <h3 class="font-display-sm text-display-sm text-on-surface group-hover:text-primary transition-colors">{{ lead.title }}</h3>
+                {% if lead.summary %}<p class="font-body-md text-body-md text-on-surface-variant">{{ lead.summary }}</p>{% endif %}
+                <div class="flex flex-wrap items-center gap-space-sm font-label-sm text-label-sm text-outline pt-space-xs">
+                    <span class="inline-flex items-center gap-1"><span class="msym text-[14px]">schedule</span>{{ lead.published_at|vn_date }}</span>
+                    {% if lead.category %}<span class="text-outline">·</span><span>{{ lead.category.name }}</span>{% endif %}
+                    <span class="text-outline">·</span>
+                    <span class="inline-flex items-center gap-1"><span class="msym text-[14px]">visibility</span>{{ lead.views }}</span>
+                </div>
+            </div>
+        </a>
+        {% endwith %}
+
         <div class="grid grid-cols-1 md:grid-cols-2 gap-space-md">
-            {% for p in featured %}
+            {% for p in featured|slice:"1:" %}
             <a href="{% url 'cms:post_public' p.slug %}" class="group bg-white rounded-xl shadow-sm overflow-hidden flex flex-col hover:shadow-md transition-shadow">
                 {% if p.cover %}
-                <img src="{{ p.cover.url }}" alt="{{ p.title }}" loading="lazy" class="h-32 w-full object-cover">
+                <img src="{{ p.cover.url }}" alt="{{ p.title }}" loading="lazy" class="h-36 w-full object-cover">
                 {% else %}
-                <div class="h-32 bg-primary-container flex items-center justify-center">
+                <div class="h-36 bg-primary-container flex items-center justify-center">
                     <span class="msym text-white/40 text-[48px]">article</span>
                 </div>
                 {% endif %}
-                <div class="p-space-md flex flex-col gap-space-xs">
-                    <div class="flex items-center gap-1.5">
+                <div class="p-space-md flex flex-col gap-space-xs flex-1">
+                    <div class="flex flex-wrap items-center gap-1.5">
                         <span class="font-label-sm text-label-sm text-primary uppercase">{{ p.get_post_type_display }}</span>
                         {% if p.is_featured %}<span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-tertiary-fixed text-tertiary font-label-sm">
                             <span class="msym text-[12px]">push_pin</span>Nổi bật</span>{% endif %}
                     </div>
                     <h3 class="font-headline-sm text-headline-sm text-on-surface group-hover:text-primary transition-colors line-clamp-2">{{ p.title }}</h3>
                     {% if p.summary %}<p class="font-body-sm text-body-sm text-on-surface-variant line-clamp-2">{{ p.summary }}</p>{% endif %}
-                    <span class="font-label-sm text-label-sm text-outline mt-auto">{{ p.published_at|vn_date }}</span>
+                    <span class="font-label-sm text-label-sm text-outline mt-auto pt-space-xs">{{ p.published_at|vn_date }}</span>
                 </div>
             </a>
             {% endfor %}
@@ -204,18 +232,18 @@
                 <h2 class="font-headline-sm text-headline-sm text-on-surface">Hướng dẫn kỹ thuật</h2>
             </div>
             <ul class="flex flex-col gap-space-sm">
-                {% for p in bulletins %}
+                {% for p in guides %}
                 <li>
                     <a href="{% url 'cms:post_public' p.slug %}" class="group flex items-start gap-space-sm">
                         <span class="msym text-[16px] text-primary mt-0.5 shrink-0">chevron_right</span>
                         <div class="min-w-0">
-                            <span class="block font-body-sm text-body-sm text-on-surface group-hover:text-primary">{{ p.title }}</span>
+                            <span class="block font-body-sm text-body-sm text-on-surface group-hover:text-primary line-clamp-2">{{ p.title }}</span>
                             <span class="block font-label-sm text-label-sm text-outline">{{ p.published_at|vn_date }}</span>
                         </div>
                     </a>
                 </li>
                 {% empty %}
-                <li class="font-body-sm text-on-surface-variant">Chưa có bản tin.</li>
+                <li class="font-body-sm text-on-surface-variant">Chưa có hướng dẫn.</li>
                 {% endfor %}
             </ul>
             <a href="{% url 'cms:post_list' %}?type=guide" class="mt-space-md h-9 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface font-label-md flex items-center justify-center">
@@ -228,16 +256,19 @@
                 <span class="msym text-[20px] text-primary">category</span>
                 <h2 class="font-headline-sm text-headline-sm text-on-surface">Chuyên mục</h2>
             </div>
-            <div class="flex flex-wrap gap-space-xs">
+            <ul class="flex flex-col gap-1">
                 {% for c in categories %}
-                <a href="{% url 'cms:post_list' %}?cat={{ c.slug }}"
-                   class="px-space-sm py-1 rounded-full bg-surface-container hover:bg-primary-fixed hover:text-on-primary-fixed text-on-surface font-label-md transition-colors">
-                    {{ c.name }}
-                </a>
+                <li>
+                    <a href="{% url 'cms:post_list' %}?cat={{ c.slug }}"
+                       class="group flex items-center justify-between gap-space-sm px-space-sm py-1.5 rounded-lg hover:bg-surface-container-low transition-colors">
+                        <span class="font-body-sm text-body-sm text-on-surface group-hover:text-primary">{{ c.name }}</span>
+                        <span class="font-label-sm text-label-sm text-outline">{{ c.published }}</span>
+                    </a>
+                </li>
                 {% empty %}
-                <span class="font-body-sm text-on-surface-variant">Chưa có chuyên mục.</span>
+                <li class="font-body-sm text-on-surface-variant">Chưa có chuyên mục.</li>
                 {% endfor %}
-            </div>
+            </ul>
         </div>
 
         <div class="bg-surface-container rounded-xl p-space-lg">

@@ -8,6 +8,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
+from core import textfmt
 from core.permissions import has_perm, perm_required
 from . import forms as f
 from . import insights
@@ -45,15 +46,24 @@ def home(request):
     # "Tin mới" không lặp lại bài đã nằm trong khối nổi bật / đang quan tâm.
     shown = pinned | {p.pk for p in hot}
 
+    from django.db.models import Count
+
+    categories = list(m.Category.objects.annotate(
+        published=Count("post", filter=Q(post__status="published"))).order_by("order", "name"))
+    guides = posts.filter(post_type="guide").order_by("-published_at")[:5]
+    bulletins = posts.filter(post_type__in=["bulletin", "forecast", "advice"])[:5]
+
     return render(request, "cms/home.html", {
         "featured": featured,
         "hot": hot,
         "latest": posts.exclude(pk__in=shown)[:8] if request.user.is_authenticated else [],
-        "bulletins": posts.filter(post_type__in=["bulletin", "forecast", "advice"])[:5],
+        "bulletins": bulletins,
+        "guides": guides,
         "alerts": Alert.objects.filter(status__in=["published", "updated"], valid_from__lte=today, valid_to__gte=today)
                        .select_related("pest", "crop").prefetch_related("divisions")[:5],
-        "categories": m.Category.objects.all(),
+        "categories": categories,
         "is_guest": not request.user.is_authenticated,
+        "total_posts": posts.count(),
     })
 
 
@@ -87,7 +97,10 @@ def post_public(request, slug):
         insights.refresh_hot_scores(m.Post.objects.filter(pk=post.pk))
     related = public_posts().filter(post_type=post.post_type).exclude(pk=post.pk)[:4]
     return render(request, "cms/post_public.html", {
-        "post": post, "related": related, "assistant": insights.brief(post)})
+        "post": post, "related": related, "assistant": insights.brief(post),
+        "sections": textfmt.outline(post.content or ""),
+        "reading_minutes": textfmt.reading_minutes(post.content),
+    })
 
 
 @login_required

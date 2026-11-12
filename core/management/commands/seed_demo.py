@@ -2,6 +2,7 @@
 import random
 from datetime import date, timedelta
 
+from django.core.management import call_command
 from django.core.management.base import BaseCommand
 from django.db import transaction
 from django.utils import timezone
@@ -45,6 +46,9 @@ class Command(BaseCommand):
         self.forecasting()
         self.content()
         self.reports_and_system()
+        # Ghép nội dung thực tế: bài viết chuyên ngành, cảnh báo, ảnh đại diện.
+        # Chạy sau cùng để có sẵn danh mục, người dùng và bản tin cảnh báo.
+        call_command("seed_content", verbosity=0)
         self.stdout.write(self.style.SUCCESS("Xong. Tài khoản mẫu: admin, lanhdao, pheduyet, chuyenmon, bientap, dieutra1, dieutra2, xem. Mật khẩu chung: %s" % DEMO_PASSWORD))
 
     # ---------- phân quyền
@@ -215,42 +219,14 @@ class Command(BaseCommand):
                 threshold=th, origin="manual", status="confirmed", created_by=self.u["chuyenmon"],
                 confirmed_by=self.u["pheduyet"], confirmed_at=timezone.now())
 
-    # ---------- bản tin, tin bài
+    # ---------- chuyên mục nội dung
     def content(self):
-        from alerts import models as a
+        """Chỉ chuẩn bị chuyên mục; bài viết và bản tin do lệnh seed_content tạo."""
         from cms import models as c
 
-        today = timezone.localdate()
-        fc = None
-        from forecasts.models import Forecast
-        fc = Forecast.objects.first()
-        alert, created = a.Alert.objects.get_or_create(code="CB-001", defaults={
-            "title": "Cảnh báo rầy nâu hại lúa", "pest": self.rayna, "crop": self.lua, "valid_from": today,
-            "valid_to": today + timedelta(days=14), "risk_level": "high", "forecast": fc,
-            "basis": "Tỷ lệ hại trung bình tăng liên tục, thời tiết thuận lợi cho rầy phát triển.",
-            "guidance": "Thăm đồng thường xuyên; phun thuốc đặc hiệu khi mật độ vượt ngưỡng; hạn chế bón thừa đạm.",
-            "channels": ["web", "notify"], "status": "published", "created_by": self.u["chuyenmon"],
-            "approved_by": self.u["pheduyet"], "published_at": timezone.now()})
-        if created:
-            alert.divisions.set(self.districts)
-            alert.recipient_units.set(self.units)
-            a.AlertRevision.objects.create(alert=alert, action="publish", version=1, user=self.u["pheduyet"],
-                                           snapshot={"title": alert.title}, note="Dữ liệu mẫu")
-            a.FollowUpTask.objects.create(alert=alert, title="Kiểm tra thực tế sau xử lý rầy nâu", division=self.districts[0],
-                                          unit=self.units[0], assignee=self.u["dieutra1"], due_date=today + timedelta(days=7))
-        cats = {sl: c.Category.objects.get_or_create(slug=sl, defaults={"name": n, "order": o})[0]
-                for o, (n, sl) in enumerate([("Tin tức", "tin-tuc"), ("Bản tin chuyên ngành", "ban-tin"),
-                                             ("Hướng dẫn kỹ thuật", "huong-dan"), ("Thông báo", "thong-bao")])}
-        posts = [("Khởi động hệ thống quản lý điều tra sinh vật gây hại", "news", "tin-tuc",
-                  "Hệ thống phục vụ cập nhật dữ liệu điều tra, theo dõi diễn biến và phát hành cảnh báo."),
-                 ("Hướng dẫn kỹ thuật phòng trừ rầy nâu hại lúa", "guide", "huong-dan",
-                  "1. Thăm đồng thường xuyên.\n2. Bón phân cân đối.\n3. Phun thuốc khi mật độ vượt ngưỡng."),
-                 ("Thông báo lịch điều tra định kỳ", "notice", "thong-bao", "Điều tra thực hiện hằng tuần vào thứ Hai.")]
-        for title, ptype, cslug, body in posts:
-            if not c.Post.objects.filter(title=title).exists():
-                c.Post.objects.create(title=title, post_type=ptype, category=cats[cslug],
-                                      summary=body[:120], content=body, status="published", published_at=timezone.now(),
-                                      author=self.u["bientap"], is_featured=(ptype == "news"))
+        for slug, name, order in [("tin-tuc", "Tin tức", 0), ("ban-tin", "Bản tin chuyên ngành", 1),
+                                   ("huong-dan", "Hướng dẫn kỹ thuật", 4), ("thong-bao", "Thông báo", 6)]:
+            c.Category.objects.get_or_create(slug=slug, defaults={"name": name, "order": order})
 
     # ---------- báo cáo, cấu hình
     def reports_and_system(self):

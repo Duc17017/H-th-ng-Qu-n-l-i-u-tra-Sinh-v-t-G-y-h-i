@@ -26,9 +26,38 @@ PUBLIC_PREFIXES = ("cms/",)
 
 
 def serve_media(request, path):
-    if not request.user.is_authenticated:
-        if not any(path.startswith(p) for p in PUBLIC_PREFIXES):
+    """Phục vụ tệp tải lên với kiểm soát quyền.
+    
+    - Tệp trong PUBLIC_PREFIXES (cms/): mọi người xem được.
+    - Tệp trong PROTECTED_PREFIXES: chỉ những người có quyền module tương ứng.
+    - Tệp khác: từ chối (404).
+    """
+    from core.permissions import has_perm
+
+    is_public = any(path.startswith(p) for p in PUBLIC_PREFIXES)
+    is_protected = any(path.startswith(p) for p in PROTECTED_PREFIXES)
+
+    if not is_public and not is_protected:
+        raise Http404  # Tệp không nằm trong thư mục cho phép.
+
+    # Kiểm tra quyền cho tệp nhạy cảm:
+    # - records/ → cần quyền data (phiếu điều tra)
+    # - documents/ → cần quyền system (tài liệu quản lý)
+    # - reports/ → cần quyền report
+    # - backups/ → cần quyền system
+    if is_protected:
+        allowed = False
+        if path.startswith("records/") and has_perm(request.user, "data", "view"):
+            allowed = True
+        elif path.startswith("documents/") and has_perm(request.user, "system", "view"):
+            allowed = True
+        elif path.startswith("reports/") and has_perm(request.user, "report", "view"):
+            allowed = True
+        elif path.startswith("backups/") and has_perm(request.user, "system", "view"):
+            allowed = True
+        if not allowed:
             raise Http404
+
     try:
         full = Path(safe_join(settings.MEDIA_ROOT, path))
     except Exception:
