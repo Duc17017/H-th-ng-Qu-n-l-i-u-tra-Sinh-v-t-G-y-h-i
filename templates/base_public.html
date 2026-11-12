@@ -27,6 +27,7 @@
                     margin-bottom: 0.25rem; }
     </style>
     {% block extra_css %}{% endblock %}
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 </head>
 <body class="bg-surface font-sans text-on-surface antialiased">
 
@@ -53,8 +54,8 @@
             <div class="flex items-center gap-space-sm shrink-0">
                 {% if user.is_authenticated %}
                 {# Menu tài khoản — đồng bộ với header của cổng nghiệp vụ (base_ui.html). #}
-                <div class="relative group">
-                    <button type="button" aria-haspopup="true" aria-label="Menu tài khoản"
+                <div class="relative" x-data="{ open: false }" @click.outside="open = false">
+                    <button type="button" @click="open = !open" :aria-expanded="open" aria-haspopup="true" aria-label="Menu tài khoản"
                             class="flex items-center gap-space-sm cursor-pointer bg-transparent border-0 rounded-xl px-1.5 py-1 hover:bg-surface-container transition-colors">
                         <div class="hidden sm:flex flex-col text-right leading-tight">
                             <span class="font-label-lg text-label-lg text-on-surface">{{ user.display_name }}</span>
@@ -63,25 +64,28 @@
                         <div class="w-9 h-9 rounded-full bg-primary flex items-center justify-center shrink-0">
                             <span class="msym text-white text-[18px]">person</span>
                         </div>
-                        <span class="msym text-[18px] text-outline">expand_more</span>
+                        <span class="msym text-[18px] text-outline" :class="open && 'rotate-180'" style="transition: transform 200ms;">expand_more</span>
                     </button>
-                    <div class="invisible opacity-0 group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100 transition-opacity absolute right-0 top-full mt-1 w-60 bg-white rounded-xl shadow-lg p-2 z-50 border border-outline-variant/30">
+                    <div x-show="open" x-transition:enter="transition ease-out duration-100" x-transition:enter-start="opacity-0 scale-95" 
+                         x-transition:enter-end="opacity-100 scale-100" x-transition:leave="transition ease-in duration-75" 
+                         x-transition:leave-start="opacity-100 scale-100" x-transition:leave-end="opacity-0 scale-95"
+                         class="fixed sm:absolute right-4 sm:right-0 left-4 sm:left-auto sm:top-full mt-2 w-auto sm:w-60 bg-white rounded-xl shadow-xl p-2 z-50 border border-outline-variant/30">
                         <div class="px-3 py-2 border-b border-outline-variant/30 mb-1">
                             <span class="block font-label-lg text-label-lg text-on-surface truncate">{{ user.display_name }}</span>
                             <span class="block font-label-sm text-label-sm text-on-surface-variant truncate">
                                 {{ user.username }}{% if user.unit %} · {{ user.unit.name }}{% endif %}
                             </span>
                         </div>
-                        <a href="{% url 'accounts:profile' %}"
+                        <a href="{% url 'accounts:profile' %}" @click="open = false"
                            class="flex items-center gap-2 px-3 py-2 rounded-lg font-body-sm text-on-surface hover:bg-surface-container">
                             <span class="msym text-[18px] text-outline">badge</span>Thông tin cá nhân
                         </a>
-                        <a href="{% url 'accounts:password_change' %}"
+                        <a href="{% url 'accounts:password_change' %}" @click="open = false"
                            class="flex items-center gap-2 px-3 py-2 rounded-lg font-body-sm text-on-surface hover:bg-surface-container">
                             <span class="msym text-[18px] text-outline">lock_reset</span>Đổi mật khẩu
                         </a>
                         {% if has_backoffice %}
-                        <a href="{{ home_url }}"
+                        <a href="{{ home_url }}" @click="open = false"
                            class="flex items-center gap-2 px-3 py-2 rounded-lg font-body-sm text-on-surface hover:bg-surface-container">
                             <span class="msym text-[18px] text-outline">dashboard</span>Vào hệ thống nghiệp vụ
                         </a>
@@ -93,7 +97,7 @@
                         {% endif %}
                         <form method="post" action="{% url 'accounts:logout' %}" class="pt-1 mt-1 border-t border-outline-variant/30">
                             {% csrf_token %}
-                            <button type="submit"
+                            <button type="submit" @click="open = false"
                                     class="w-full flex items-center gap-2 px-3 py-2 rounded-lg font-body-sm text-on-surface hover:bg-surface-container text-left">
                                 <span class="msym text-[18px] text-outline">logout</span>Đăng xuất
                             </button>
