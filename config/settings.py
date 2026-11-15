@@ -118,7 +118,9 @@ if os.getenv("EMAIL_HOST"):
     EMAIL_PORT = int(os.getenv("EMAIL_PORT", "587"))
     EMAIL_HOST_USER = os.getenv("EMAIL_USER", "")
     EMAIL_HOST_PASSWORD = os.getenv("EMAIL_PASSWORD", "")
-    EMAIL_USE_TLS = True
+    # Cổng 465 dùng SSL ngầm định; các cổng khác (587) dùng STARTTLS.
+    EMAIL_USE_SSL = os.getenv("EMAIL_USE_SSL", "1" if EMAIL_PORT == 465 else "0") == "1"
+    EMAIL_USE_TLS = not EMAIL_USE_SSL
 else:
     EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "bvtv@example.local")
