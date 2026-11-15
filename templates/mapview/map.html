@@ -104,6 +104,18 @@
         <div class="relative bg-white rounded-xl shadow-sm p-space-sm">
             <div id="map" role="application" aria-label="Bản đồ điểm điều tra"></div>
 
+            <!-- Tìm điểm điều tra -->
+            <div class="absolute top-6 left-1/2 -translate-x-1/2 w-[min(24rem,calc(100%-9rem))] z-[500]">
+                <div class="hud-overlay rounded-xl shadow-lg flex items-center gap-2 px-3 h-11">
+                    <span class="msym text-[20px] text-outline">search</span>
+                    <input id="map-search" type="search" autocomplete="off" placeholder="Tìm điểm theo mã, tên hoặc địa bàn..."
+                           aria-label="Tìm điểm điều tra" aria-controls="map-search-results"
+                           class="flex-1 min-w-0 bg-transparent border-0 outline-none font-body-sm text-on-surface placeholder:text-outline">
+                </div>
+                <ul id="map-search-results" role="listbox" hidden
+                    class="hud-overlay mt-1 rounded-xl shadow-lg max-h-64 overflow-y-auto py-1 font-body-sm"></ul>
+            </div>
+
             <!-- Legend HUD -->
             <div class="hud-overlay absolute bottom-6 left-6 rounded-xl shadow-lg px-space-md py-space-sm z-[500]">
                 <div class="font-label-sm text-label-sm text-on-surface-variant uppercase mb-1.5">Mức độ gây hại</div>
@@ -181,6 +193,62 @@
     function esc(s) { var d = document.createElement('div'); d.textContent = s == null ? '' : s; return d.innerHTML; }
     function qs() { return new URLSearchParams(new FormData(document.getElementById('flt'))).toString(); }
 
+    var markers = {}, pointList = [];
+
+    function fold(s) {
+        return String(s == null ? '' : s).normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+            .replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase();
+    }
+
+    function focusPoint(id) {
+        var m = markers[id];
+        if (!m) return;
+        map.setView(m.getLatLng(), Math.max(map.getZoom(), 15));
+        m.openTooltip();
+        showPoint(id);
+    }
+
+    (function initSearch() {
+        var input = document.getElementById('map-search');
+        var list = document.getElementById('map-search-results');
+        function render() {
+            var q = fold(input.value.trim());
+            list.innerHTML = '';
+            if (!q) { list.hidden = true; return; }
+            var hits = pointList.filter(function (p) {
+                return fold(p.code + ' ' + p.name + ' ' + p.division).indexOf(q) !== -1;
+            }).slice(0, 8);
+            if (!hits.length) {
+                list.innerHTML = '<li class="px-3 py-2 text-on-surface-variant">Không tìm thấy điểm phù hợp.</li>';
+            }
+            hits.forEach(function (p) {
+                var li = document.createElement('li');
+                li.setAttribute('role', 'option');
+                li.tabIndex = 0;
+                li.className = 'px-3 py-2 cursor-pointer hover:bg-surface-container';
+                li.innerHTML = '<span class="block text-on-surface">' + esc(p.code + ' - ' + p.name) + '</span>'
+                             + '<span class="block font-label-sm text-label-sm text-on-surface-variant">' + esc(p.division) + '</span>';
+                function pick() { list.hidden = true; input.value = p.code + ' - ' + p.name; focusPoint(p.id); }
+                li.addEventListener('click', pick);
+                li.addEventListener('keydown', function (e) { if (e.key === 'Enter') pick(); });
+                list.appendChild(li);
+            });
+            list.hidden = false;
+        }
+        input.addEventListener('input', render);
+        input.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') { list.hidden = true; }
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                var first = list.querySelector('li[role=option]');
+                if (first) first.click();
+            }
+        });
+        document.addEventListener('click', function (e) {
+            if (!e.target.closest('#map-search-results') && e.target !== input) list.hidden = true;
+        });
+    })();
+
     function load() {
         var q = qs();
         var exp = document.getElementById('exp');
@@ -188,6 +256,8 @@
 
         fetch('{% url "mapview:points" %}?' + q).then(function (r) { return r.json(); }).then(function (g) {
             pts.clearLayers();
+            markers = {};
+            pointList = g.features.map(function (f) { return f.properties; });
             var b = [];
             g.features.forEach(function (f) {
                 var c = f.geometry.coordinates, p = f.properties, ll = [c[1], c[0]];
@@ -196,6 +266,7 @@
                     radius: 8, color: '#fff', weight: 2,
                     fillColor: COLORS[p.level] || COLORS.none, fillOpacity: .95
                 }).addTo(pts);
+                markers[p.id] = m;
                 m.bindTooltip(esc(p.code + ' - ' + p.name));
                 m.on('click', function () { showPoint(p.id); });
             });

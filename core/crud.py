@@ -3,7 +3,6 @@ from django.contrib import messages
 from django.core.exceptions import PermissionDenied
 from django.core.paginator import Paginator
 from django.db.models import ProtectedError, Q
-from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import path, reverse
 

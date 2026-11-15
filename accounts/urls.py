@@ -3,7 +3,7 @@ from django.contrib.auth.views import LogoutView
 
 from core.crud import Crud
 from . import views
-from .forms import DivisionForm, UnitForm, UserCreateForm, UserEditForm
+from .forms import DivisionForm, UnitForm, UserEditForm
 from .models import AdminDivision, Unit, User
 
 app_name = "accounts"

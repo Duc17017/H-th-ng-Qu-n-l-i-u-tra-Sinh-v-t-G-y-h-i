@@ -3,7 +3,6 @@ from django.urls import path
 from core.crud import Crud
 from . import views as v
 from .models import ExternalLayer
-from django import forms
 from core.forms import StyledModelForm
 
 app_name = "mapview"

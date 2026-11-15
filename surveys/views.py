@@ -1,5 +1,4 @@
 import json
-import uuid
 
 from django.contrib import messages
 from django.core.exceptions import PermissionDenied
@@ -12,7 +11,7 @@ from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from core.audit import history_for
-from core.permissions import division_ids_for, has_perm, perm_required, scope_qs
+from core.permissions import has_perm, perm_required, scope_qs
 from catalog import models as cat
 from . import forms as f
 from . import models as m
@@ -531,9 +530,6 @@ def sandbox_simulator(request):
     }
     return render(request, "surveys/sandbox.html", ctx)
 
-
-from django.http import JsonResponse
-from django.views.decorators.http import require_POST
 
 @require_POST
 @perm_required("plans", "view")

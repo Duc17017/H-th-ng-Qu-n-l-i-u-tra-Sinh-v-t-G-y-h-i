@@ -6,7 +6,7 @@ from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from core.audit import history_for
-from core.permissions import has_perm, perm_required, scope_qs
+from core.permissions import has_perm, perm_required
 from . import forms as f
 from . import models as m
 from . import services as s

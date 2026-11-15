@@ -1,7 +1,6 @@
 """Dựng nội dung báo cáo dạng bảng (tiêu đề + cột + dòng) rồi kết xuất Excel/PDF."""
 import io
 import os
-import datetime as dt
 
 from django.conf import settings
 from django.db.models import Count, Sum

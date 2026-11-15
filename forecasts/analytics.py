@@ -1,7 +1,5 @@
 """Phân tích dữ liệu điều tra: tổng hợp, so sánh kỳ, xu hướng. Chỉ dùng phiếu đã xác nhận."""
-import datetime as dt
-
-from django.db.models import Avg, Count, F, Max, Sum
+from django.db.models import Avg, Count, Max, Sum
 from django.db.models.functions import TruncDay, TruncMonth, TruncWeek
 
 from surveys.models import SurveyRecord

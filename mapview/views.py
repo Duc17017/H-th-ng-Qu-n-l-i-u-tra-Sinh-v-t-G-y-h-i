@@ -10,7 +10,7 @@ from accounts.models import AdminDivision
 from catalog.models import Crop, DamageLevel, PestSpecies
 from core.permissions import has_perm, perm_required, scope_qs
 from forecasts.analytics import confirmed_records
-from surveys.models import SurveyPoint, SurveyRecord, SurveyRoute
+from surveys.models import SurveyPoint, SurveyRoute
 from .models import ExternalLayer
 
 

@@ -3,7 +3,7 @@ from django.conf import settings
 from django.contrib.auth.forms import UserCreationForm
 
 from core.forms import StyledModelForm
-from .models import AdminDivision, RolePermission, Unit, User
+from .models import AdminDivision, Unit, User
 
 
 class DivisionForm(StyledModelForm):
