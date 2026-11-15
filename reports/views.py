@@ -134,6 +134,10 @@ def summary_export(request):
                    r["surveyed"], r["affected"], r["avg_density"], r["avg_rate"], r["max_rate"]])
     import io
 
+    from core.xlsx import format_table
+
+    ws.title = "Tong_hop"
+    format_table(ws)
     buf = io.BytesIO()
     wb.save(buf)
     resp = HttpResponse(buf.getvalue(), content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")

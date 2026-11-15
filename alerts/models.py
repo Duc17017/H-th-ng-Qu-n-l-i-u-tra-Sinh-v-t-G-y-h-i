@@ -12,7 +12,7 @@ from forecasts.models import RISK_LEVELS, Forecast
 class Alert(TimeStampedModel):
     STATUSES = [("draft", "Dự thảo"), ("pending", "Chờ phê duyệt"), ("published", "Đã phát hành"),
                 ("updated", "Đã cập nhật"), ("expired", "Hết hiệu lực")]
-    CHANNELS = [("web", "Trang thông tin"), ("notify", "Thông báo nội bộ"), ("email", "Email")]
+    CHANNELS = [("web", "Trang thông tin"), ("notify", "Thông báo nội bộ"), ("email", "Email"), ("sms", "Tin nhắn SMS")]
     code = models.CharField("Số hiệu bản tin", max_length=40, unique=True)
     title = models.CharField("Tiêu đề", max_length=255)
     pest = models.ForeignKey(cat.PestSpecies, on_delete=models.PROTECT, verbose_name="Sinh vật gây hại")

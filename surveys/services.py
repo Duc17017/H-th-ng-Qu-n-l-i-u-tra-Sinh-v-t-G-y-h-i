@@ -168,8 +168,6 @@ def build_template_xlsx():
     for c in ws[1]:
         c.font = Font(bold=True)
     ws.append(["DD001", "15/10/2026", "LUA", "RAYNAU", "", "", 120, 15, "", 2, 0.3, 10.123, 105.456, "Mẫu"])
-    for col in "ABCDEFGHIJKLMN":
-        ws.column_dimensions[col].width = 22
     ref = wb.create_sheet("Danh_muc")
     ref.append(["Loại", "Mã", "Tên"])
     for label, qs in (("Cây trồng", cat.Crop.objects.all()), ("Sinh vật gây hại", cat.PestSpecies.objects.all()),
@@ -180,6 +178,10 @@ def build_template_xlsx():
     ref.append(["Điểm điều tra", "", ""])
     for p in m.SurveyPoint.objects.filter(is_active=True):
         ref.append(["Điểm điều tra", p.code, p.name])
+    from core.xlsx import format_table
+
+    format_table(ws)
+    format_table(ref)
     buf = io.BytesIO()
     wb.save(buf)
     return buf.getvalue()

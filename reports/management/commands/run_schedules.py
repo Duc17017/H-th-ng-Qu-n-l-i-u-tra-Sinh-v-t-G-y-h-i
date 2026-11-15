@@ -23,6 +23,12 @@ class Command(BaseCommand):
         parser.add_argument("--force", action="store_true", help="Chạy tất cả lịch đang bật, bỏ qua thời hạn")
 
     def handle(self, *args, **opts):
+        from core import tasks
+
+        tasks.load_handlers()
+        retried = tasks.run_pending()
+        if retried:
+            self.stdout.write(f"Tác vụ nền đã chạy lại: {retried}")
         expired = expire_due()
         self.stdout.write(f"Bản tin hết hiệu lực: {expired}")
         now = timezone.now()

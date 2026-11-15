@@ -5,6 +5,7 @@ from django.utils import timezone
 
 from accounts.models import User
 from core.audit import write_log
+from core import tasks
 from core.notify import notify, users_with_perm
 from . import models as m
 
@@ -88,8 +89,11 @@ def _publish(alert, was_update=False):
         notify(recipients(alert), f"{prefix}Cảnh báo: {alert.title}",
                f"Mức nguy cơ: {alert.get_risk_level_display()}. {alert.valid_from:%d/%m/%Y} - {alert.valid_to:%d/%m/%Y}",
                f"/alerts/alerts/{alert.pk}/")
+    # Email và SMS đi qua hàng đợi nền để việc phê duyệt không phải chờ máy chủ thư/SMS.
     if "email" in chans:
-        _send_email(alert, prefix)
+        tasks.enqueue("alert_email", alert_id=alert.pk, prefix=prefix)
+    if "sms" in chans:
+        tasks.enqueue("alert_sms", alert_id=alert.pk, prefix=prefix)
     if "web" in chans:
         from cms.models import Post, PostRevision
 
@@ -144,6 +148,36 @@ def _send_email(alert, prefix=""):
 
     write_log("alert_email_sent", alert, note=f"Đã gửi {sent}/{len(to)} email", user=alert.approved_by)
     return sent
+
+
+def send_sms_alert(alert, prefix=""):
+    """Gửi tin nhắn ngắn cho cán bộ thuộc địa bàn/đơn vị nhận có số điện thoại hợp lệ."""
+    from core.sms import normalize_phone, send_sms
+
+    numbers = sorted({normalize_phone(u.phone) for u in recipients(alert)} - {None})
+    if not numbers:
+        return 0
+    text = (f"{prefix}CANH BAO {alert.get_risk_level_display()}: {alert.pest.name} tren {alert.crop.name}. "
+            f"Hieu luc den {alert.valid_to:%d/%m/%Y}. Xem chi tiet tren he thong.")
+    sent = 0
+    for number in numbers:
+        try:
+            if send_sms(number, text):
+                sent += 1
+        except Exception as exc:  # noqa: BLE001 - ghi log rồi tiếp tục với số kế tiếp
+            write_log("alert_sms_failed", alert, note=f"{number}: {exc}"[:500], user=alert.approved_by)
+    write_log("alert_sms_sent", alert, note=f"Đã gửi {sent}/{len(numbers)} SMS", user=alert.approved_by)
+    return sent
+
+
+@tasks.register("alert_email")
+def _task_email(alert_id, prefix=""):
+    _send_email(m.Alert.objects.get(pk=alert_id), prefix)
+
+
+@tasks.register("alert_sms")
+def _task_sms(alert_id, prefix=""):
+    send_sms_alert(m.Alert.objects.get(pk=alert_id), prefix)
 
 
 @transaction.atomic

@@ -5,7 +5,7 @@ from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth.views import LoginView, PasswordChangeView
+from django.contrib.auth.views import LoginView, PasswordChangeView, PasswordResetView
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse_lazy
 from django.utils import timezone
@@ -44,6 +44,29 @@ class SiteLoginView(LoginView):
             )
             logger.warning("Đăng nhập bị khoá tạm thời: username=%s ip=%s còn=%ss", username, ip, wait)
             return self.render_to_response(self.get_context_data(form=self.get_form()))
+        return super().post(request, *args, **kwargs)
+
+
+class SitePasswordResetView(PasswordResetView):
+    """Quên mật khẩu qua email. Luôn trả về cùng một trang kết quả để không lộ email nào có trong hệ thống.
+
+    Tài khoản đăng nhập qua LDAP (không có mật khẩu cục bộ) bị Django tự bỏ qua.
+    Giới hạn theo IP để không bị lợi dụng gửi thư hàng loạt.
+    """
+    template_name = "registration/password_reset_form.html"
+    email_template_name = "registration/password_reset_email.txt"
+    subject_template_name = "registration/password_reset_subject.txt"
+    success_url = reverse_lazy("accounts:password_reset_done")
+
+    def post(self, request, *args, **kwargs):
+        from django.core.cache import cache
+
+        key = f"pwreset:{_client_ip(request)}"
+        count = cache.get(key, 0)
+        if count >= 5:
+            messages.error(request, "Bạn đã yêu cầu quá nhiều lần. Vui lòng thử lại sau một giờ.")
+            return self.render_to_response(self.get_context_data(form=self.get_form()))
+        cache.set(key, count + 1, 3600)
         return super().post(request, *args, **kwargs)
 
 

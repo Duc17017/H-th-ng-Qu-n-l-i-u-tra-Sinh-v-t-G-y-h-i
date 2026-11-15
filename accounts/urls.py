@@ -1,5 +1,7 @@
 from django.urls import path
+from django.contrib.auth import views as auth_views
 from django.contrib.auth.views import LogoutView
+from django.urls import reverse_lazy
 
 from core.crud import Crud
 from . import views
@@ -26,6 +28,11 @@ urlpatterns = [
     path("logout/", LogoutView.as_view(), name="logout"),
     path("profile/", views.profile, name="profile"),
     path("password/", views.SitePasswordChangeView.as_view(), name="password_change"),
+    path("forgot/", views.SitePasswordResetView.as_view(), name="password_reset"),
+    path("forgot/sent/", auth_views.PasswordResetDoneView.as_view(), name="password_reset_done"),
+    path("forgot/<uidb64>/<token>/", auth_views.PasswordResetConfirmView.as_view(
+        success_url=reverse_lazy("accounts:password_reset_complete")), name="password_reset_confirm"),
+    path("forgot/complete/", auth_views.PasswordResetCompleteView.as_view(), name="password_reset_complete"),
     path("notifications/", views.notifications, name="notifications"),
     path("notifications/<int:pk>/", views.notification_open, name="notification_open"),
     path("roles/", views.role_matrix, name="role_matrix"),

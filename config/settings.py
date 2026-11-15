@@ -178,6 +178,30 @@ REGISTRATION_MAX_PER_IP = int(os.getenv("REGISTRATION_MAX_PER_IP", "3"))
 REGISTRATION_EMAIL_DOMAINS = [
     d.strip().lower() for d in os.getenv("REGISTRATION_EMAIL_DOMAINS", "").split(",") if d.strip()]
 
+# ── Tác vụ nền (email, SMS) ───────────────────────────────────────────────────
+# thread: chạy ngay trong luồng nền | worker: chờ `manage.py process_tasks --loop` | eager: chạy tại chỗ
+TASKS_MODE = os.getenv("TASKS_MODE", "thread")
+
+# ── SMS qua eSMS.vn (để trống khoá = chế độ thử, chỉ ghi log) ───────────────────
+ESMS_API_KEY = os.getenv("ESMS_API_KEY", "")
+ESMS_SECRET_KEY = os.getenv("ESMS_SECRET_KEY", "")
+ESMS_SMS_TYPE = os.getenv("ESMS_SMS_TYPE", "8")
+ESMS_BRANDNAME = os.getenv("ESMS_BRANDNAME", "")
+
+# ── Đăng nhập LDAP / Active Directory (bật bằng cách đặt LDAP_SERVER_URI) ──────
+LDAP_SERVER_URI = os.getenv("LDAP_SERVER_URI", "")          # ví dụ ldaps://dc.so.gov.vn:636
+LDAP_USER_DN_TEMPLATE = os.getenv("LDAP_USER_DN_TEMPLATE", "")  # ví dụ {username}@so.gov.vn hoặc uid={username},ou=users,dc=so,dc=gov,dc=vn
+LDAP_SEARCH_BASE = os.getenv("LDAP_SEARCH_BASE", "")        # ví dụ dc=so,dc=gov,dc=vn (dùng để lấy họ tên, email, SĐT)
+LDAP_DEFAULT_ROLE = os.getenv("LDAP_DEFAULT_ROLE", "viewer")
+LDAP_AUTO_CREATE = os.getenv("LDAP_AUTO_CREATE", "1") == "1"
+AUTHENTICATION_BACKENDS = ["accounts.ldap_backend.LdapBackend", "django.contrib.auth.backends.ModelBackend"]
+
+# ── Trợ lý AI hội thoại (tùy chọn, tương thích OpenAI Chat Completions) ────────
+# Để trống = chỉ dùng trợ lý trích rút offline.
+AI_API_URL = os.getenv("AI_API_URL", "")      # ví dụ https://api.openai.com/v1/chat/completions
+AI_API_KEY = os.getenv("AI_API_KEY", "")
+AI_MODEL = os.getenv("AI_MODEL", "")
+
 if not DEBUG:
     SECURE_CONTENT_TYPE_NOSNIFF = True
     SESSION_COOKIE_HTTPONLY = True

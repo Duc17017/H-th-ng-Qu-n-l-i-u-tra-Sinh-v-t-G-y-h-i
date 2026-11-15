@@ -40,6 +40,9 @@
       </div>
 
       <input type="hidden" name="next" value="{{ next }}">
+      <div class="text-right -mt-space-xs">
+        <a href="{% url 'accounts:password_reset' %}" class="font-label-md text-label-md text-primary hover:underline">Quên mật khẩu?</a>
+      </div>
       <button class="h-11 rounded-xl bg-primary hover:bg-primary-container text-white font-label-lg inline-flex items-center justify-center gap-2 mt-space-sm" type="submit">
         <span class="msym text-[20px]">login</span>Đăng nhập
       </button>

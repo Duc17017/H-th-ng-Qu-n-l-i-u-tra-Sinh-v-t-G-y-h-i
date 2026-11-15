@@ -88,13 +88,14 @@ def to_xlsx(rep):
     hr = ws.max_row
     for c in ws[hr]:
         c.font = Font(bold=True, color="FFFFFF")
-        c.fill = PatternFill("solid", fgColor="2E7D32")
-        c.alignment = Alignment(wrap_text=True, vertical="center")
     for row in rep["rows"]:
         # tránh chèn công thức từ dữ liệu người dùng nhập
         ws.append([("'" + v if isinstance(v, str) and v[:1] in "=+-@" else v) for v in row])
-    for i, h in enumerate(rep["headers"], start=1):
-        ws.column_dimensions[ws.cell(row=hr, column=i).column_letter].width = max(14, min(40, len(str(h)) + 6))
+    from core.xlsx import format_table
+
+    format_table(ws, header_row=hr)
+    # Tiêu đề báo cáo và phần tóm tắt nằm phía trên bảng, không tính vào độ rộng cột.
+    ws["A1"].alignment = Alignment(wrap_text=False)
     buf = io.BytesIO()
     wb.save(buf)
     return buf.getvalue()

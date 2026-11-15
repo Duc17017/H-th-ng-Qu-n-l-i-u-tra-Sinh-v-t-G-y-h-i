@@ -112,8 +112,16 @@ Cấu hình build: `tailwind.config.js`, `package.json`. Sửa giao diện phả
 
 Các mục dưới đây **chưa được xây dựng**, cần biết để không hiểu nhầm khi vận hành:
 
-- Gửi SMS (`Alert.CHANNELS` chỉ có `web`, `notify`, `email`)
 - Nhận diện qua video / KYC
 - Học máy; dự báo dùng hồi quy tuyến tính trên số liệu điều tra thực tế
-- Đăng nhập một lần (SSO/LDAP) với hệ thống của Sở
-- Hàng đợi tác vụ nền (Celery); email gửi đồng bộ trong lúc phát hành cảnh báo
+
+Các mục sau **đã có code và test tự động, nhưng chưa thử với dịch vụ thật**. Cần thử một lần
+với khoá hoặc máy chủ của khách trước khi bàn giao (cấu hình trong `.env`, xem `.env.example`):
+
+- Gửi SMS qua eSMS.vn (kênh `sms` của bản tin cảnh báo). Chưa có khoá thì chỉ ghi log.
+- Đăng nhập LDAP / Active Directory (`accounts/ldap_backend.py`). Tài khoản mới luôn là Người xem.
+  Chưa hỗ trợ SSO qua trình duyệt (SAML/OIDC).
+- Hàng đợi tác vụ nền lưu trong database, không dùng Celery (`core/tasks.py`). Email và SMS
+  đi qua hàng đợi, lỗi được thử lại tối đa 3 lần.
+- Quên mật khẩu qua email, cần cấu hình SMTP (`EMAIL_HOST`...).
+- Trợ lý AI hội thoại tùy chọn (`AI_API_URL`...). Không cấu hình thì dùng trợ lý offline.

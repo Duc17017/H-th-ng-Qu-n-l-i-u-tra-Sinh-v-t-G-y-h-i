@@ -8,7 +8,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
-from core import textfmt
+from core import llm, textfmt
 from core.permissions import has_perm, perm_required
 from . import forms as f
 from . import insights
@@ -110,7 +110,18 @@ def post_ask(request, slug):
     post = get_object_or_404(m.Post, slug=slug)
     if not post.is_public and not has_perm(request.user, "cms", "edit"):
         raise PermissionDenied
-    result = insights.answer(post, request.POST.get("question", ""))
+    question = request.POST.get("question", "").strip()
+    if llm.enabled() and question:
+        from django.core.cache import cache
+
+        key = f"ai:{request.user.pk}"
+        used = cache.get(key, 0)
+        if used < 20:  # tối đa 20 câu hỏi AI mỗi người mỗi giờ để kiểm soát chi phí
+            cache.set(key, used + 1, 3600)
+            text = llm.ask(post.title, insights._plain(post), question)
+            if text:
+                return JsonResponse({"ok": True, "answer": text, "source": "Trợ lý AI, dựa trên nội dung bài viết"})
+    result = insights.answer(post, question)
     return JsonResponse(result)
 
 
