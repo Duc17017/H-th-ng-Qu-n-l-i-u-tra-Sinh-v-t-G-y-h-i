@@ -6,7 +6,7 @@ databases:
 
 services:
   - type: web
-    name: agrigov-ttbvtv
+    name: he-thong-quan-li-sinh-vat-gay-hai
     runtime: python
     plan: free
     buildCommand: pip install -r requirements.txt && python manage.py collectstatic --noinput && python manage.py migrate --noinput
