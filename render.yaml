@@ -1,31 +1,36 @@
+databases:
+  - name: agrigov-db
+    databaseName: agrigov
+    user: agrigov
+    plan: free
+
 services:
   - type: web
     name: agrigov-ttbvtv
     runtime: python
     plan: free
-    buildCommand: |
-      pip install --upgrade pip setuptools wheel
-      pip install -r requirements.txt
-      python manage.py collectstatic --noinput
-      python manage.py migrate
-    startCommand: gunicorn config.wsgi:application --bind 0.0.0.0:10000 --workers 1 --timeout 30
+    buildCommand: pip install -r requirements.txt && python manage.py collectstatic --noinput && python manage.py migrate --noinput
+    startCommand: gunicorn config.wsgi:application --bind 0.0.0.0:$PORT --workers 1 --timeout 60
     envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.3
+      - key: DATABASE_URL
+        fromDatabase:
+          name: agrigov-db
+          property: connectionString
       - key: DJANGO_SECRET_KEY
-        scope: runtime
+        generateValue: true
       - key: DJANGO_DEBUG
         value: "0"
       - key: DJANGO_ALLOWED_HOSTS
-        scope: runtime
-      - key: DATABASE_URL
-        scope: runtime
+        value: ".onrender.com"
+      - key: DJANGO_CSRF_ORIGINS
+        value: "https://*.onrender.com"
+      - key: DJANGO_BEHIND_PROXY
+        value: "1"
       - key: REGISTRATION_OPEN
         value: "1"
       - key: REGISTRATION_AUTO_ACTIVE
         value: "1"
       - key: REGISTRATION_MAX_PER_IP
         value: "3"
-databases:
-  - name: agrigov_db
-    databaseName: agrigov
-    user: agrigov_user
-    plan: free
